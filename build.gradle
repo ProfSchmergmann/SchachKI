@@ -9,14 +9,16 @@ mainClassName = "de.profschmergmann.Main"
 
 repositories {
     mavenCentral()
+    maven { url 'https://jitpack.io' }
 }
 
 dependencies {
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
+    implementation 'com.github.jokrus:j-chess-java-xsd:master-SNAPSHOT'
+    implementation 'com.github.jokrus:j-chess-client-reference:master-SNAPSHOT'
 }
-
 
 test {
     useJUnitPlatform()
