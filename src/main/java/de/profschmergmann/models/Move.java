@@ -6,14 +6,17 @@ public record Move(Position from, Position to, Piece.PieceEnum piece, boolean ca
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) return true;
-		if (o == null || getClass() != o.getClass()) return false;
+		if (o == null || this.getClass() != o.getClass()) return false;
 		Move move = (Move) o;
-		return canAttack == move.canAttack && Objects.equals(from, move.from) && Objects.equals(to, move.to) && piece == move.piece;
+		return this.canAttack == move.canAttack &&
+				Objects.equals(this.from, move.from) &&
+				Objects.equals(this.to, move.to) &&
+				this.piece == move.piece;
 	}
 
 	@Override
 	public String toString() {
-		return (canAttack ? "Can attack " : "Can move ")
-				+ from + " -> " + to + " with " + piece;
+		return (this.canAttack ? "Can attack " : "Can move ")
+				+ this.from + " -> " + this.to + " with " + this.piece.identifier;
 	}
 }

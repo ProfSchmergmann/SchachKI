@@ -9,13 +9,14 @@ public record Position(char column, int row) {
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) return true;
-		if (o == null || getClass() != o.getClass()) return false;
+		if (o == null || this.getClass() != o.getClass()) return false;
 		var position = (Position) o;
-		return column == position.column && row == position.row;
+		return this.column == position.column &&
+				this.row == position.row;
 	}
 
 	@Override
 	public String toString() {
-		return column + "" + row;
+		return this.column + "" + this.row;
 	}
 }
