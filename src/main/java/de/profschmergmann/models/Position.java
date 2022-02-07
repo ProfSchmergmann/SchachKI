@@ -1,9 +1,20 @@
 package de.profschmergmann.models;
 
-public record Position(char column, int row) {
+/**
+ * Record position for storing a position like a1.
+ */
+public record Position(char file, int rank) {
+
+	/**
+	 * Constructor which checks for file and rank and throws an
+	 * {@link IllegalArgumentException} if they are out of bounds.
+	 *
+	 * @param file the file which has to be between 'a' and 'h'	both inclusive
+	 * @param rank the rank which has to be between 1 and 8 both inclusive
+	 */
 	public Position {
-		if (column < 'a' || column > 'h') throw new IllegalArgumentException("Row out of bounds with value=" + column);
-		if (row < 1 || row > 8) throw new IllegalArgumentException("Line out of bounds with value=" + row);
+		if (file < 'a' || file > 'h') throw new IllegalArgumentException("File out of bounds with value=" + file);
+		if (rank < 1 || rank > 8) throw new IllegalArgumentException("Rank out of bounds with value=" + rank);
 	}
 
 	@Override
@@ -11,12 +22,12 @@ public record Position(char column, int row) {
 		if (this == o) return true;
 		if (o == null || this.getClass() != o.getClass()) return false;
 		var position = (Position) o;
-		return this.column == position.column &&
-				this.row == position.row;
+		return this.file == position.file &&
+				this.rank == position.rank;
 	}
 
 	@Override
 	public String toString() {
-		return this.column + "" + this.row;
+		return this.file + "" + this.rank;
 	}
 }

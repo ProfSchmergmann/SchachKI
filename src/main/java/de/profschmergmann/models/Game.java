@@ -109,7 +109,7 @@ public class Game {
 		this.boards.get(this.boards.size() - 1)
 		           .getPositions()
 		           .forEach((position, piece) -> {
-			           var column = switch (position.column()) {
+			           var column = switch (position.file()) {
 				           case 'a' -> 0;
 				           case 'b' -> 1;
 				           case 'c' -> 2;
@@ -120,7 +120,7 @@ public class Game {
 				           case 'h' -> 7;
 				           default -> 8;
 			           };
-			           board[position.row() - 1][column] = piece;
+			           board[position.rank() - 1][column] = piece;
 		           });
 		var res = new StringBuilder();
 		var space = 0;

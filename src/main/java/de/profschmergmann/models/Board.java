@@ -2,6 +2,7 @@ package de.profschmergmann.models;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 
 public class Board {
 	private final HashMap<Position, Piece> positions = new HashMap<>();
@@ -156,6 +157,16 @@ public class Board {
 		throw new IllegalArgumentException("Move from: " + from + " to: " + to + " not possible!");
 	}
 
+	public Map.Entry<Position, Piece> findPieceOnBoard(Piece.PieceEnum piece) {
+		return this.positions
+				.entrySet()
+				.stream()
+				.filter(positionPieceEntry ->
+						positionPieceEntry.getValue().piece().equals(piece))
+				.findFirst()
+				.orElse(null);
+	}
+
 	/**
 	 * Tries to compute all available moves for the given team.
 	 * TODO: Try if this method works faster with parallel streams
@@ -167,43 +178,43 @@ public class Board {
 	 */
 	public HashSet<Move> getAvailableMoves(Piece.Team team) {
 		var set = new HashSet<Move>();
-		for (var entry : this.positions.entrySet()) {
+		for (Map.Entry<Position, Piece> entry : this.positions.entrySet()) {
 			var fullPiece = entry.getValue();
 			if (!fullPiece.getTeam().equals(team)) continue;
 			var currentPos = entry.getKey();
 			var piece = entry.getValue().piece();
 			if (piece == Piece.PieceEnum.BISHOP_W || piece == Piece.PieceEnum.BISHOP_B ||
 					piece == Piece.PieceEnum.QUEEN_W || piece == Piece.PieceEnum.QUEEN_B) {
-				if (currentPos.column() - 1 >= 'a' && currentPos.row() + 1 <= 8) {
-					var c = (char) (currentPos.column() - 1);
-					var i = currentPos.row() + 1;
+				if (currentPos.file() - 1 >= 'a' && currentPos.rank() + 1 <= 8) {
+					var c = (char) (currentPos.file() - 1);
+					var i = currentPos.rank() + 1;
 					while (c >= 'a' && i <= 8) {
 						if (this.addMoveToSetIfPossible(team, set, currentPos, piece, c, i)) break;
 						c--;
 						i++;
 					}
 				}
-				if (currentPos.column() + 1 <= 'h' && currentPos.row() + 1 <= 8) {
-					var c = (char) (currentPos.column() + 1);
-					var i = currentPos.row() + 1;
+				if (currentPos.file() + 1 <= 'h' && currentPos.rank() + 1 <= 8) {
+					var c = (char) (currentPos.file() + 1);
+					var i = currentPos.rank() + 1;
 					while (c <= 'h' && i <= 8) {
 						if (this.addMoveToSetIfPossible(team, set, currentPos, piece, c, i)) break;
 						c++;
 						i++;
 					}
 				}
-				if (currentPos.column() + 1 <= 'h' && currentPos.row() - 1 >= 1) {
-					var c = (char) (currentPos.column() + 1);
-					var i = currentPos.row() - 1;
+				if (currentPos.file() + 1 <= 'h' && currentPos.rank() - 1 >= 1) {
+					var c = (char) (currentPos.file() + 1);
+					var i = currentPos.rank() - 1;
 					while (c <= 'h' && i <= 8) {
 						if (this.addMoveToSetIfPossible(team, set, currentPos, piece, c, i)) break;
 						c++;
 						i--;
 					}
 				}
-				if (currentPos.column() - 1 >= 'a' && currentPos.row() - 1 >= 1) {
-					var c = (char) (currentPos.column() - 1);
-					var i = currentPos.row() - 1;
+				if (currentPos.file() - 1 >= 'a' && currentPos.rank() - 1 >= 1) {
+					var c = (char) (currentPos.file() - 1);
+					var i = currentPos.rank() - 1;
 					while (c >= 'a' && i >= 1) {
 						if (this.addMoveToSetIfPossible(team, set, currentPos, piece, c, i)) break;
 						c--;
@@ -214,14 +225,14 @@ public class Board {
 			if (piece == Piece.PieceEnum.KING_W || piece == Piece.PieceEnum.KING_B) {
 				for (var c = 'a'; c <= 'h'; c++) {
 					for (var i = 1; i <= 8; i++) {
-						if ((((currentPos.column() - 1) == c) && ((currentPos.row() + 1) == i)) ||
-								((currentPos.column() == c) && ((currentPos.row() + 1) == i)) ||
-								(((currentPos.column() + 1) == c) && ((currentPos.row() + 1) == i)) ||
-								(((currentPos.column() + 1) == c) && (currentPos.row() == i)) ||
-								(((currentPos.column() - 1) == c) && ((currentPos.row() - 1) == i)) ||
-								((currentPos.column() == c) && (currentPos.row() == (i - 1))) ||
-								(((currentPos.column() + 1) == c) && ((currentPos.row() - 1) == i)) ||
-								(((currentPos.column() - 1) == c) && (currentPos.row() == i))) {
+						if ((((currentPos.file() - 1) == c) && ((currentPos.rank() + 1) == i)) ||
+								((currentPos.file() == c) && ((currentPos.rank() + 1) == i)) ||
+								(((currentPos.file() + 1) == c) && ((currentPos.rank() + 1) == i)) ||
+								(((currentPos.file() + 1) == c) && (currentPos.rank() == i)) ||
+								(((currentPos.file() - 1) == c) && ((currentPos.rank() - 1) == i)) ||
+								((currentPos.file() == c) && (currentPos.rank() == (i - 1))) ||
+								(((currentPos.file() + 1) == c) && ((currentPos.rank() - 1) == i)) ||
+								(((currentPos.file() - 1) == c) && (currentPos.rank() == i))) {
 							this.addMoveToSetIfPossible(team, set, currentPos, piece, c, i);
 						}
 					}
@@ -230,14 +241,14 @@ public class Board {
 			if (piece == Piece.PieceEnum.KNIGHT_W || piece == Piece.PieceEnum.KNIGHT_B) {
 				for (var c = 'a'; c <= 'h'; c++) {
 					for (var i = 1; i <= 8; i++) {
-						if (currentPos.column() - 2 == c && currentPos.row() + 1 == i ||
-								currentPos.column() - 1 == c && currentPos.row() + 2 == i ||
-								currentPos.column() + 1 == c && currentPos.row() + 2 == i ||
-								currentPos.column() + 2 == c && currentPos.row() + 1 == i ||
-								currentPos.column() + 2 == c && currentPos.row() - 1 == i ||
-								currentPos.column() + 1 == c && currentPos.row() - 2 == i ||
-								currentPos.column() - 1 == c && currentPos.row() - 2 == i ||
-								currentPos.column() - 2 == c && currentPos.row() - 1 == i) {
+						if (currentPos.file() - 2 == c && currentPos.rank() + 1 == i ||
+								currentPos.file() - 1 == c && currentPos.rank() + 2 == i ||
+								currentPos.file() + 1 == c && currentPos.rank() + 2 == i ||
+								currentPos.file() + 2 == c && currentPos.rank() + 1 == i ||
+								currentPos.file() + 2 == c && currentPos.rank() - 1 == i ||
+								currentPos.file() + 1 == c && currentPos.rank() - 2 == i ||
+								currentPos.file() - 1 == c && currentPos.rank() - 2 == i ||
+								currentPos.file() - 2 == c && currentPos.rank() - 1 == i) {
 							this.addMoveToSetIfPossible(team, set, currentPos, piece, c, i);
 						}
 					}
@@ -246,52 +257,58 @@ public class Board {
 			if (piece == Piece.PieceEnum.PAWN_W || piece == Piece.PieceEnum.PAWN_B) {
 				switch (team) {
 					case WHITE -> {
-						if (currentPos.row() + 1 <= 8) {
-							this.addMoveToSetIfPossible(team, set, currentPos, piece, currentPos.column(), currentPos.row() + 1);
+						if (currentPos.rank() + 1 <= 8) {
+							this.addMoveToSetIfPossible(team, set, currentPos, piece, currentPos.file(), currentPos.rank() + 1);
+							if (currentPos.rank() == 2) {
+								this.addMoveToSetIfPossible(team, set, currentPos, piece, currentPos.file(), currentPos.rank() + 2);
+							}
 						}
-						if (currentPos.column() + 1 <= 'h' && currentPos.row() + 1 <= 8) {
+						if (currentPos.file() + 1 <= 'h' && currentPos.rank() + 1 <= 8) {
 							this.addMoveToSetIfPossible(team, set, currentPos, piece,
-									(char) (currentPos.column() + 1), currentPos.row() + 1);
+									(char) (currentPos.file() + 1), currentPos.rank() + 1);
 						}
 					}
 					case BLACK -> {
-						if (currentPos.row() - 1 >= 1) {
-							this.addMoveToSetIfPossible(team, set, currentPos, piece, currentPos.column(), currentPos.row() - 1);
+						if (currentPos.rank() - 1 >= 1) {
+							this.addMoveToSetIfPossible(team, set, currentPos, piece, currentPos.file(), currentPos.rank() - 1);
+							if (currentPos.rank() == 7) {
+								this.addMoveToSetIfPossible(team, set, currentPos, piece, currentPos.file(), currentPos.rank() - 2);
+							}
 						}
-						if (currentPos.column() - 1 >= 'a' && currentPos.row() - 1 >= 0) {
+						if (currentPos.file() - 1 >= 'a' && currentPos.rank() - 1 >= 0) {
 							this.addMoveToSetIfPossible(team, set, currentPos, piece,
-									(char) (currentPos.column() - 1), currentPos.row() - 1);
+									(char) (currentPos.file() - 1), currentPos.rank() - 1);
 						}
 					}
 				}
 			}
 			if (piece == Piece.PieceEnum.ROOK_W || piece == Piece.PieceEnum.ROOK_B ||
 					piece == Piece.PieceEnum.QUEEN_W || piece == Piece.PieceEnum.QUEEN_B) {
-				if ((currentPos.column() - 1) >= 'a') {
-					var c = (char) (currentPos.column() - 1);
+				if ((currentPos.file() - 1) >= 'a') {
+					var c = (char) (currentPos.file() - 1);
 					while (c >= 'a') {
-						if (this.addMoveToSetIfPossible(team, set, currentPos, piece, c, currentPos.row())) break;
+						if (this.addMoveToSetIfPossible(team, set, currentPos, piece, c, currentPos.rank())) break;
 						c--;
 					}
 				}
-				if (currentPos.row() + 1 <= 8) {
-					var i = currentPos.row() + 1;
+				if (currentPos.rank() + 1 <= 8) {
+					var i = currentPos.rank() + 1;
 					while (i >= 1) {
-						if (this.addMoveToSetIfPossible(team, set, currentPos, piece, currentPos.column(), i)) break;
+						if (this.addMoveToSetIfPossible(team, set, currentPos, piece, currentPos.file(), i)) break;
 						i--;
 					}
 				}
-				if ((currentPos.column() + 1) <= 'h') {
-					var c = (char) (currentPos.column() + 1);
+				if ((currentPos.file() + 1) <= 'h') {
+					var c = (char) (currentPos.file() + 1);
 					while (c >= 'a') {
-						if (this.addMoveToSetIfPossible(team, set, currentPos, piece, c, currentPos.row())) break;
+						if (this.addMoveToSetIfPossible(team, set, currentPos, piece, c, currentPos.rank())) break;
 						c--;
 					}
 				}
-				if (currentPos.row() - 1 >= 1) {
-					var i = currentPos.row() - 1;
+				if (currentPos.rank() - 1 >= 1) {
+					var i = currentPos.rank() - 1;
 					while (i >= 1) {
-						if (this.addMoveToSetIfPossible(team, set, currentPos, piece, currentPos.column(), i)) break;
+						if (this.addMoveToSetIfPossible(team, set, currentPos, piece, currentPos.file(), i)) break;
 						i--;
 					}
 				}
@@ -307,8 +324,8 @@ public class Board {
 	 * @param set        the set where the move should be added to
 	 * @param currentPos the current position
 	 * @param piece      the piece to move
-	 * @param c          the column
-	 * @param i          the row
+	 * @param c          the file
+	 * @param i          the rank
 	 * @return true if it worked, else false
 	 */
 	private boolean addMoveToSetIfPossible(Piece.Team team, HashSet<Move> set, Position currentPos,

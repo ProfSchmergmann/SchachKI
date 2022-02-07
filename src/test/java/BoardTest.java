@@ -1,4 +1,7 @@
-import de.profschmergmann.models.*;
+import de.profschmergmann.models.Board;
+import de.profschmergmann.models.Game;
+import de.profschmergmann.models.Piece;
+import de.profschmergmann.models.Position;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -7,7 +10,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class MoveTest {
+public class BoardTest {
 
 	private Board b;
 
@@ -47,6 +50,13 @@ public class MoveTest {
 			g.move(move.from(), move.to());
 			System.out.println(move.piece().identifier + " moves from " + move.from() + " to " + move.to());
 		}
+	}
+
+	@Test
+	@DisplayName("Test if black King is at the right position.")
+	public void testIfBlackKingIsAtRightStartingSpot() {
+		var kingB = this.b.findPieceOnBoard(Piece.PieceEnum.KING_B);
+		assertEquals(new Position('e', 8), kingB.getKey(), "Black king is not at e8!");
 	}
 
 }
