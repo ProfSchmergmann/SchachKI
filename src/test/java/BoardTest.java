@@ -35,22 +35,6 @@ public class BoardTest {
 	}
 
 	@Test
-	@DisplayName("Play random two moves each.")
-	public void testPlayRandom2MovesEach() {
-		var g = new Game();
-		System.out.println(g.getCurrentBoard());
-		for (var i = 0; i < 6; i++) {
-			var moves = g.getAvailableMoves().stream().toList();
-			moves.stream().filter(move -> (move.from().rank() >= 9 || move.to().rank() >= 9)).forEach(System.out::println);
-			var r = ThreadLocalRandom.current().nextInt(0, moves.size());
-			var move = moves.get(r);
-			System.out.println(move.piece().identifier + " moves from " + move.from() + " to " + move.to());
-			g.move(move.from(), move.to());
-			System.out.println(g.getCurrentBoard());
-		}
-	}
-
-	@Test
 	@DisplayName("Test if black King is at the right position.")
 	public void testIfBlackKingIsAtRightStartingSpot() {
 		var kingB = this.b.findPieceOnBoard(Piece.PieceEnum.KING_B);

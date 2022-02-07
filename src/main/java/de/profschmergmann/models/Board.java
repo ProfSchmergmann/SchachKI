@@ -1,11 +1,11 @@
 package de.profschmergmann.models;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.*;
 
 public class Board {
 	private final HashMap<Position, Piece> positions = new HashMap<>();
+	private final List<Piece> attackedBlackPieces = new ArrayList<>();
+	private final List<Piece> attackedWhitePieces = new ArrayList<>();
 	private Position enPassant;
 
 	/**
@@ -179,6 +179,13 @@ public class Board {
 				this.getAvailableMoves(currentTeam)
 				    .contains(new Move(from, to, this.positions.get(from).piece(), false))) {
 			var pieceToMove = this.positions.get(from);
+			var pieceToAttack = this.positions.get(to);
+			if (pieceToAttack != null) {
+				switch (currentTeam) {
+					case WHITE -> this.attackedBlackPieces.add(pieceToAttack);
+					case BLACK -> this.attackedWhitePieces.add(pieceToAttack);
+				}
+			}
 			this.positions.remove(from);
 			this.positions.put(to, pieceToMove);
 			if ((pieceToMove.piece().equals(Piece.PieceEnum.PAWN_W)
@@ -218,48 +225,46 @@ public class Board {
 			if (!fullPiece.getTeam().equals(team)) continue;
 			var currentPos = entry.getKey();
 			var piece = entry.getValue().piece();
+			char c;
+			int i;
 			if (piece == Piece.PieceEnum.BISHOP_W || piece == Piece.PieceEnum.BISHOP_B ||
 					piece == Piece.PieceEnum.QUEEN_W || piece == Piece.PieceEnum.QUEEN_B) {
-				if (currentPos.file() - 1 >= 'a' && currentPos.rank() + 1 <= 8) {
-					var c = (char) (currentPos.file() - 1);
-					var i = currentPos.rank() + 1;
-					while (c >= 'a' && i <= 8) {
-						if (this.addMoveToSetIfPossible(team, set, currentPos, piece, c, i)) break;
-						c--;
-						i++;
-					}
+
+				c = (char) (currentPos.file() - 1);
+				i = currentPos.rank() + 1;
+				while (c >= 'a' && i <= 8) {
+					if (this.addMoveToSetIfPossible(team, set, currentPos, piece, c, i)) break;
+					c--;
+					i++;
 				}
-				if (currentPos.file() + 1 <= 'h' && currentPos.rank() + 1 <= 8) {
-					var c = (char) (currentPos.file() + 1);
-					var i = currentPos.rank() + 1;
-					while (c <= 'h' && i <= 8) {
-						if (this.addMoveToSetIfPossible(team, set, currentPos, piece, c, i)) break;
-						c++;
-						i++;
-					}
+
+				c = (char) (currentPos.file() + 1);
+				i = currentPos.rank() + 1;
+				while (c <= 'h' && i <= 8) {
+					if (this.addMoveToSetIfPossible(team, set, currentPos, piece, c, i)) break;
+					c++;
+					i++;
 				}
-				if (currentPos.file() + 1 <= 'h' && currentPos.rank() - 1 >= 1) {
-					var c = (char) (currentPos.file() + 1);
-					var i = currentPos.rank() - 1;
-					while (c <= 'h' && i >= 1) {
-						if (this.addMoveToSetIfPossible(team, set, currentPos, piece, c, i)) break;
-						c++;
-						i--;
-					}
+
+				c = (char) (currentPos.file() + 1);
+				i = currentPos.rank() - 1;
+				while (c <= 'h' && i >= 1) {
+					if (this.addMoveToSetIfPossible(team, set, currentPos, piece, c, i)) break;
+					c++;
+					i--;
 				}
-				if (currentPos.file() - 1 >= 'a' && currentPos.rank() - 1 >= 1) {
-					var c = (char) (currentPos.file() - 1);
-					var i = currentPos.rank() - 1;
-					while (c >= 'a' && i >= 1) {
-						if (this.addMoveToSetIfPossible(team, set, currentPos, piece, c, i)) break;
-						c--;
-						i--;
-					}
+				c = (char) (currentPos.file() - 1);
+				i = currentPos.rank() - 1;
+				while (c >= 'a' && i >= 1) {
+					if (this.addMoveToSetIfPossible(team, set, currentPos, piece, c, i)) break;
+					c--;
+					i--;
 				}
+
 			}
 			if (piece == Piece.PieceEnum.KING_W || piece == Piece.PieceEnum.KING_B) {
-				for (var c = 'a'; c <= 'h'; c++) {
-					for (var i = 1; i <= 8; i++) {
+				for (c = 'a'; c <= 'h'; c++) {
+					for (i = 1; i <= 8; i++) {
 						if (currentPos.file() - 1 == c && currentPos.rank() + 1 == i ||
 								currentPos.file() == c && currentPos.rank() + 1 == i ||
 								currentPos.file() + 1 == c && currentPos.rank() + 1 == i ||
@@ -274,8 +279,8 @@ public class Board {
 				}
 			}
 			if (piece == Piece.PieceEnum.KNIGHT_W || piece == Piece.PieceEnum.KNIGHT_B) {
-				for (var c = 'a'; c <= 'h'; c++) {
-					for (var i = 1; i <= 8; i++) {
+				for (c = 'a'; c <= 'h'; c++) {
+					for (i = 1; i <= 8; i++) {
 						if (currentPos.file() - 2 == c && currentPos.rank() + 1 == i ||
 								currentPos.file() - 1 == c && currentPos.rank() + 2 == i ||
 								currentPos.file() + 1 == c && currentPos.rank() + 2 == i ||
@@ -327,34 +332,31 @@ public class Board {
 			}
 			if (piece == Piece.PieceEnum.ROOK_W || piece == Piece.PieceEnum.ROOK_B ||
 					piece == Piece.PieceEnum.QUEEN_W || piece == Piece.PieceEnum.QUEEN_B) {
-				if (currentPos.file() - 1 >= 'a') {
-					var c = (char) (currentPos.file() - 1);
-					while (c >= 'a') {
-						if (this.addMoveToSetIfPossible(team, set, currentPos, piece, c, currentPos.rank())) break;
-						c--;
-					}
+
+				c = (char) (currentPos.file() - 1);
+				while (c >= 'a') {
+					if (this.addMoveToSetIfPossible(team, set, currentPos, piece, c, currentPos.rank())) break;
+					c--;
 				}
-				if (currentPos.rank() + 1 <= 8) {
-					var i = currentPos.rank() + 1;
-					while (i <= 8) {
-						if (this.addMoveToSetIfPossible(team, set, currentPos, piece, currentPos.file(), i)) break;
-						i++;
-					}
+
+				i = currentPos.rank() + 1;
+				while (i <= 8) {
+					if (this.addMoveToSetIfPossible(team, set, currentPos, piece, currentPos.file(), i)) break;
+					i++;
 				}
-				if (currentPos.file() + 1 <= 'h') {
-					var c = (char) (currentPos.file() + 1);
-					while (c >= 'a') {
-						if (this.addMoveToSetIfPossible(team, set, currentPos, piece, c, currentPos.rank())) break;
-						c--;
-					}
+
+				c = (char) (currentPos.file() + 1);
+				while (c <= 'h') {
+					if (this.addMoveToSetIfPossible(team, set, currentPos, piece, c, currentPos.rank())) break;
+					c++;
 				}
-				if (currentPos.rank() - 1 >= 1) {
-					var i = currentPos.rank() - 1;
-					while (i >= 1) {
-						if (this.addMoveToSetIfPossible(team, set, currentPos, piece, currentPos.file(), i)) break;
-						i--;
-					}
+
+				i = currentPos.rank() - 1;
+				while (i >= 1) {
+					if (this.addMoveToSetIfPossible(team, set, currentPos, piece, currentPos.file(), i)) break;
+					i--;
 				}
+
 			}
 		}
 		return set;
@@ -381,19 +383,13 @@ public class Board {
 		var pawn = piece.equals(Piece.PieceEnum.PAWN_B) ||
 				piece.equals(Piece.PieceEnum.PAWN_W);
 		if (this.positions.containsKey(neighbourPos)) {
-			if (pawn) {
-				if (currentPos.file() == c) {
-					return false;
-				}
-			}
+			if (pawn && currentPos.file() == c) return false;
 			if (this.positions.get(neighbourPos).getTeam() != team) {
 				set.add(new Move(currentPos, neighbourPos, piece, true));
 			}
 			return true;
 		}
-		if (pawn) {
-			if (currentPos.file() != c) return false;
-		}
+		if (pawn && currentPos.file() != c) return false;
 		set.add(new Move(currentPos, neighbourPos, piece, false));
 		return false;
 	}
