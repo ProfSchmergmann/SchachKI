@@ -60,6 +60,7 @@ public class Game {
 			this.enPassant = new Position(splitRecord[3].charAt(0),
 					Integer.parseInt(String.valueOf(splitRecord[3].charAt(1)))
 			);
+			this.boards.get(this.boards.size()-1).setEnPassant(this.enPassant);
 		}
 		this.halfMoves = Integer.parseInt(String.valueOf(splitRecord[4].charAt(0)));
 		this.fullMoves = Integer.parseInt(String.valueOf(splitRecord[5].charAt(0)));

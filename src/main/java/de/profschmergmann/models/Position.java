@@ -1,5 +1,7 @@
 package de.profschmergmann.models;
 
+import de.profschmergmann.Logger;
+
 /**
  * Record position for storing a position like a1.
  */
@@ -13,8 +15,10 @@ public record Position(char file, int rank) {
 	 * @param rank the rank which has to be between 1 and 8 both inclusive
 	 */
 	public Position {
-		if (file < 'a' || file > 'h') throw new IllegalArgumentException("File out of bounds with value=" + file);
-		if (rank < 1 || rank > 8) throw new IllegalArgumentException("Rank out of bounds with value=" + rank);
+		if (file < 'a' || file > 'h')
+			Logger.debug("File out of bounds with value=" + file + " and rank=" + rank);
+		if (rank < 1 || rank > 8)
+			Logger.debug("Rank out of bounds with value=" + rank + " and file=" + file);
 	}
 
 	@Override

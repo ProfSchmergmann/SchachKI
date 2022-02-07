@@ -1,7 +1,4 @@
-import de.profschmergmann.models.Board;
-import de.profschmergmann.models.Game;
-import de.profschmergmann.models.Piece;
-import de.profschmergmann.models.Position;
+import de.profschmergmann.models.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,14 +38,15 @@ public class BoardTest {
 	@DisplayName("Play random two moves each.")
 	public void testPlayRandom2MovesEach() {
 		var g = new Game();
+		System.out.println(g.getCurrentBoard());
 		for (var i = 0; i < 6; i++) {
-			System.out.println(g.getCurrentBoard());
 			var moves = g.getAvailableMoves().stream().toList();
-			moves.forEach(System.out::println);
+			moves.stream().filter(move -> (move.from().rank() >= 9 || move.to().rank() >= 9)).forEach(System.out::println);
 			var r = ThreadLocalRandom.current().nextInt(0, moves.size());
 			var move = moves.get(r);
-			g.move(move.from(), move.to());
 			System.out.println(move.piece().identifier + " moves from " + move.from() + " to " + move.to());
+			g.move(move.from(), move.to());
+			System.out.println(g.getCurrentBoard());
 		}
 	}
 
@@ -57,6 +55,22 @@ public class BoardTest {
 	public void testIfBlackKingIsAtRightStartingSpot() {
 		var kingB = this.b.findPieceOnBoard(Piece.PieceEnum.KING_B);
 		assertEquals(new Position('e', 8), kingB.getKey(), "Black king is not at e8!");
+	}
+
+	@Test
+	@DisplayName("Test if enPassant Option shows up.")
+	public void testIfEnPassantOptionWorks() {
+		var g = new Game("8/8/8/2pP4/8/8/8/8 w - c6 1 1");
+		var enPassantMove = g.getAvailableMoves()
+		                     .stream()
+		                     .filter(Move::canAttack)
+		                     .findFirst()
+		                     .orElse(null);
+		assertEquals(new Move(new Position('d', 5),
+						new Position('c', 6),
+						Piece.PieceEnum.PAWN_W, true),
+				enPassantMove,
+				"There was no enPassant Move present!");
 	}
 
 }
