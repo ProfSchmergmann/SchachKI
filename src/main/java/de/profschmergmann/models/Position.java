@@ -8,21 +8,20 @@ import java.util.logging.Logger;
  */
 public record Position(char file, int rank) {
 
-  private static final Logger logger = Logger.getLogger(Position.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(Position.class.getName());
 
   /**
-   * Constructor which checks for file and rank and throws an {@link IllegalArgumentException} if
-   * they are out of bounds.
+   * Constructor which checks for file and rank and logs if they are out of bounds.
    *
    * @param file the file which has to be between 'a' and 'h'	both inclusive
    * @param rank the rank which has to be between 1 and 8 both inclusive
    */
   public Position {
     if (file < 'a' || file > 'h') {
-      logger.warning("File out of bounds with value=" + file + " and rank=" + rank);
+      LOGGER.warning("File out of bounds with value=" + file + " and rank=" + rank);
     }
     if (rank < 1 || rank > 8) {
-      logger.warning("Rank out of bounds with value=" + rank + " and file=" + file);
+      LOGGER.warning("Rank out of bounds with value=" + rank + " and file=" + file);
     }
   }
 

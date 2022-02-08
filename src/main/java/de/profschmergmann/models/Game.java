@@ -1,5 +1,6 @@
 package de.profschmergmann.models;
 
+import de.profschmergmann.models.Piece.Team;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -10,28 +11,29 @@ import java.util.List;
 public class Game {
 
   private final List<Board> boards = new ArrayList<>();
-  private Piece.Team currentTeam;
-  private boolean whiteCanCastleKingSide;
-  private boolean whiteCanCastleQueenSide;
-  private boolean blackCanCastleKingSide;
-  private boolean blackCanCastleQueenSide;
-  private Position enPassant;
-  private int halfMoves;
-  private int fullMoves;
+//  private Piece.Team currentTeam;
+//  private boolean whiteCanCastleKingSide;
+//  private boolean whiteCanCastleQueenSide;
+//  private boolean blackCanCastleKingSide;
+//  private boolean blackCanCastleQueenSide;
+//  private Position enPassant;
+//  private int halfMoves;
+//  private int fullMoves;
 
   /**
    * Constructor for a game where white starts.
    */
   public Game() {
-    this.boards.add(new Board());
-    this.currentTeam = Piece.Team.WHITE;
-    this.whiteCanCastleKingSide = true;
-    this.whiteCanCastleQueenSide = true;
-    this.blackCanCastleKingSide = true;
-    this.blackCanCastleQueenSide = true;
-    this.enPassant = null;
-    this.halfMoves = 0;
-    this.fullMoves = 1;
+    var b = new Board();
+    b.setCurrentTeam(Team.WHITE);
+    b.setWhiteCanCastleKingSide(true);
+    b.setWhiteCanCastleQueenSide(true);
+    b.setBlackCanCastleKingSide(true);
+    b.setBlackCanCastleQueenSide(true);
+    b.setEnPassant(null);
+    b.setHalfMoves(0);
+    b.setFullMoves(0);
+    this.boards.add(b);
   }
 
   /**
@@ -43,35 +45,34 @@ public class Game {
    */
   public Game(String FENRecord) {
     var splitRecord = FENRecord.split("\s");
-    this.boards.add(new Board(splitRecord[0]));
-    this.currentTeam = splitRecord[1].equals("w") ? Piece.Team.WHITE : Piece.Team.BLACK;
+    var b = new Board(splitRecord[0]);
+    b.setCurrentTeam(splitRecord[1].equals("w") ? Piece.Team.WHITE : Piece.Team.BLACK);
     if (splitRecord[2].equals("-")) {
-      this.whiteCanCastleKingSide = false;
-      this.whiteCanCastleQueenSide = false;
-      this.blackCanCastleKingSide = false;
-      this.blackCanCastleQueenSide = false;
+      b.setWhiteCanCastleKingSide(false);
+      b.setWhiteCanCastleQueenSide(false);
+      b.setBlackCanCastleKingSide(false);
+      b.setBlackCanCastleQueenSide(false);
     } else {
-			if (splitRecord[2].contains("K")) {
-				this.whiteCanCastleKingSide = true;
-			}
-			if (splitRecord[2].contains("Q")) {
-				this.whiteCanCastleQueenSide = true;
-			}
-			if (splitRecord[2].contains("k")) {
-				this.blackCanCastleKingSide = true;
-			}
-			if (splitRecord[2].contains("q")) {
-				this.blackCanCastleQueenSide = true;
-			}
+      if (splitRecord[2].contains("K")) {
+        b.setWhiteCanCastleKingSide(true);
+      }
+      if (splitRecord[2].contains("Q")) {
+        b.setWhiteCanCastleQueenSide(true);
+      }
+      if (splitRecord[2].contains("k")) {
+        b.setBlackCanCastleKingSide(true);
+      }
+      if (splitRecord[2].contains("q")) {
+        b.setBlackCanCastleQueenSide(true);
+      }
     }
     if (!splitRecord[3].equals("-")) {
-      this.enPassant = new Position(splitRecord[3].charAt(0),
-          Integer.parseInt(String.valueOf(splitRecord[3].charAt(1)))
-      );
-      this.boards.get(this.boards.size() - 1).setEnPassant(this.enPassant);
+      b.setEnPassant(new Position(splitRecord[3].charAt(0),
+          Integer.parseInt(String.valueOf(splitRecord[3].charAt(1)))));
     }
-    this.halfMoves = Integer.parseInt(String.valueOf(splitRecord[4].charAt(0)));
-    this.fullMoves = Integer.parseInt(String.valueOf(splitRecord[5].charAt(0)));
+    b.setHalfMoves(Integer.parseInt(String.valueOf(splitRecord[4].charAt(0))));
+    b.setFullMoves(Integer.parseInt(String.valueOf(splitRecord[5].charAt(0))));
+    this.boards.add(b);
   }
 
   public Board getCurrentBoard() {
@@ -79,33 +80,27 @@ public class Game {
   }
 
   public Piece.Team getCurrentTeam() {
-    return this.currentTeam;
+    return this.getCurrentBoard().getCurrentTeam();
   }
 
   /**
    * Method for performing a move inside the current game.
-   * TODO: the halfmoves and fullmoves variables are not updated inside this method.
    *
    * @param from the {@link Position} from where the move should be performed
    * @param to   the {@link Position} to where the move should be performed
    * @return true if the move worked, else false
    */
   public boolean move(Position from, Position to) {
-    var newBoard = this.boards.get(this.boards.size() - 1).move(from, to, this.currentTeam);
+    var newBoard = this.boards.get(this.boards.size() - 1).move(from, to);
     if (newBoard != null) {
       this.boards.add(newBoard);
-      this.currentTeam =
-          this.currentTeam.equals(Piece.Team.WHITE) ? Piece.Team.BLACK : Piece.Team.WHITE;
-      this.fullMoves++;
-      // TODO!
-      this.halfMoves++;
       return true;
     }
     return false;
   }
 
   public HashSet<Move> getAvailableMoves() {
-    return this.boards.get(this.boards.size() - 1).getAvailableMoves(this.currentTeam);
+    return this.boards.get(this.boards.size() - 1).getAvailableMoves();
   }
 
   /**
@@ -116,22 +111,21 @@ public class Game {
    */
   public String getCurrentGameAsFENRecord() {
     var board = new Piece[8][8];
-    this.boards.get(this.boards.size() - 1)
-        .getPositions()
-        .forEach((position, piece) -> {
-          var column = switch (position.file()) {
-            case 'a' -> 0;
-            case 'b' -> 1;
-            case 'c' -> 2;
-            case 'd' -> 3;
-            case 'e' -> 4;
-            case 'f' -> 5;
-            case 'g' -> 6;
-            case 'h' -> 7;
-            default -> 8;
-          };
-          board[position.rank() - 1][column] = piece;
-        });
+    var currentBoard = this.boards.get(this.boards.size() - 1);
+    currentBoard.getPositions().forEach((position, piece) -> {
+      var column = switch (position.file()) {
+        case 'a' -> 0;
+        case 'b' -> 1;
+        case 'c' -> 2;
+        case 'd' -> 3;
+        case 'e' -> 4;
+        case 'f' -> 5;
+        case 'g' -> 6;
+        case 'h' -> 7;
+        default -> 8;
+      };
+      board[position.rank() - 1][column] = piece;
+    });
     var res = new StringBuilder();
     var space = 0;
     for (var i = 7; i >= 0; i--) {
@@ -147,37 +141,35 @@ public class Game {
           space++;
         }
       }
-			if (space > 0) {
-				res.append(space);
-			}
+      if (space > 0) {
+        res.append(space);
+      }
       res.append("/");
     }
     res.deleteCharAt(res.length() - 1)
         .append("\s")
-        .append(this.currentTeam.identifier)
+        .append(currentBoard.getCurrentTeam().identifier)
         .append("\s");
     var castleTmp = "";
-		if (this.whiteCanCastleKingSide) {
-			castleTmp += "K";
-		}
-		if (this.whiteCanCastleQueenSide) {
-			castleTmp += "Q";
-		}
-		if (this.blackCanCastleKingSide) {
-			castleTmp += "k";
-		}
-		if (this.blackCanCastleQueenSide) {
-			castleTmp += "q";
-		}
-		if (!castleTmp.isEmpty()) {
-			res.append(castleTmp);
-		}
-    res.append("\s")
-        .append(this.enPassant != null ? this.enPassant : "-")
+    if (currentBoard.canWhiteCastleKingSide()) {
+      castleTmp += "K";
+    }
+    if (currentBoard.canWhiteCastleQueenSide()) {
+      castleTmp += "Q";
+    }
+    if (currentBoard.canBlackCastleKingSide()) {
+      castleTmp += "k";
+    }
+    if (currentBoard.canBlackCastleQueenSide()) {
+      castleTmp += "q";
+    }
+    res.append(!castleTmp.isEmpty() ? castleTmp : "-")
         .append("\s")
-        .append(this.halfMoves)
+        .append(currentBoard.enPassantPossible() ? currentBoard.getEnPassant() : "-")
         .append("\s")
-        .append(this.fullMoves);
+        .append(currentBoard.getHalfMoves())
+        .append("\s")
+        .append(currentBoard.getFullMoves());
     return res.toString();
   }
 }
