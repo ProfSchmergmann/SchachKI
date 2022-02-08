@@ -4,7 +4,6 @@ import de.profschmergmann.models.Game;
 import de.profschmergmann.models.Move;
 import de.profschmergmann.models.Piece;
 import de.profschmergmann.models.Position;
-import java.util.Comparator;
 import java.util.concurrent.ThreadLocalRandom;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -57,16 +56,13 @@ public class GameTest {
   @DisplayName("Play random moves each.")
   public void testPlayRandomMovesEach() {
     System.out.println(this.g.getCurrentBoard());
-    for (var i = 0; i < 8; i++) {
+    while (!this.g.isChecked()) {
       var moves = this.g.getAvailableMoves().stream().toList();
-      moves.stream()
-          .sorted(Comparator.comparing(Move::from))
-          .forEach(System.out::println);
       var r = ThreadLocalRandom.current().nextInt(0, moves.size());
       var move = moves.get(r);
-      System.out.println(
-          move.piece().identifier + (move.canAttack() ? " attacks from " : " moves from ") +
-              move.from() + " to " + move.to());
+//      System.out.println(
+//          move.piece().identifier + (move.canAttack() ? " attacks from " : " moves from ") +
+//              move.from() + " to " + move.to());
       this.g.move(move.from(), move.to());
       System.out.println(this.g.getCurrentBoard());
     }

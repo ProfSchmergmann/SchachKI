@@ -1,7 +1,5 @@
 package de.profschmergmann.models;
 
-import java.util.Objects;
-
 /**
  * Record move for storing a possible or made move.
  *
@@ -14,16 +12,16 @@ public record Move(Position from, Position to, Piece.PieceEnum piece, boolean ca
 
   @Override
   public boolean equals(Object o) {
-	  if (this == o) {
-		  return true;
-	  }
-	  if (o == null || this.getClass() != o.getClass()) {
-		  return false;
-	  }
+    if (this == o) {
+      return true;
+    }
+    if (o == null || this.getClass() != o.getClass()) {
+      return false;
+    }
     Move move = (Move) o;
     return this.canAttack == move.canAttack &&
-        Objects.equals(this.from, move.from) &&
-        Objects.equals(this.to, move.to) &&
+        this.from.equals(move.from) &&
+        this.to.equals(move.to) &&
         this.piece == move.piece;
   }
 

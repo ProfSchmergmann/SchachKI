@@ -4,21 +4,16 @@ import de.profschmergmann.models.Piece.Team;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Class game for holding multiple games as an ArrayList.
  */
 public class Game {
 
+  private static final Logger LOGGER = Logger.getLogger(Game.class.getName());
   private final List<Board> boards = new ArrayList<>();
-//  private Piece.Team currentTeam;
-//  private boolean whiteCanCastleKingSide;
-//  private boolean whiteCanCastleQueenSide;
-//  private boolean blackCanCastleKingSide;
-//  private boolean blackCanCastleQueenSide;
-//  private Position enPassant;
-//  private int halfMoves;
-//  private int fullMoves;
 
   /**
    * Constructor for a game where white starts.
@@ -73,6 +68,7 @@ public class Game {
     b.setHalfMoves(Integer.parseInt(String.valueOf(splitRecord[4].charAt(0))));
     b.setFullMoves(Integer.parseInt(String.valueOf(splitRecord[5].charAt(0))));
     this.boards.add(b);
+    LOGGER.log(Level.INFO, "Created new game with FEN-Record: " + FENRecord);
   }
 
   public Board getCurrentBoard() {
@@ -81,6 +77,10 @@ public class Game {
 
   public Piece.Team getCurrentTeam() {
     return this.getCurrentBoard().getCurrentTeam();
+  }
+
+  public boolean isChecked() {
+    return this.getCurrentBoard().isChecked();
   }
 
   /**
@@ -93,6 +93,7 @@ public class Game {
   public boolean move(Position from, Position to) {
     var newBoard = this.boards.get(this.boards.size() - 1).move(from, to);
     if (newBoard != null) {
+      LOGGER.log(Level.FINE, "Moved a piece from " + from + " to: " + to);
       this.boards.add(newBoard);
       return true;
     }
