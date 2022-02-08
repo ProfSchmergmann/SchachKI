@@ -63,9 +63,9 @@ public class GameTest {
           .sorted(Comparator.comparing(Move::from))
           .forEach(System.out::println);
       var r = ThreadLocalRandom.current().nextInt(0, moves.size());
-      var move = moves.stream().filter(Move::canAttack).findFirst().orElse(moves.get(r));
+      var move = moves.get(r);
       System.out.println(
-          move.piece().identifier + (move.canAttack() ? " moves from " : " attacks from ") +
+          move.piece().identifier + (move.canAttack() ? " attacks from " : " moves from ") +
               move.from() + " to " + move.to());
       this.g.move(move.from(), move.to());
       System.out.println(this.g.getCurrentBoard());

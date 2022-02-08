@@ -322,36 +322,44 @@ public class Board {
    * @param from the {@link Position} to move from
    * @param to   the {@link  Position} to move to
    * @return the resulting board
-   * @throws IllegalArgumentException if the move is not possible due to some reasons
    */
-  public Board move(Position from, Position to)
-      throws IllegalArgumentException {
-    if (!this.positions.containsKey(from)) {
-      LOGGER.log(Level.WARNING,
-          "Move not possible from: " + from + " because there is no piece to move!");
+  public Board move(Position from, Position to) {
+    var move = this.getAvailableMoves()
+        .stream()
+        .filter(move1 -> move1.from().equals(from) && move1.to().equals(to))
+        .findFirst()
+        .orElse(null);
+
+    if (move == null) {
+      LOGGER.log(Level.WARNING, "There is no move available from: " + from + " to: " + to + "!");
       return null;
     }
-    if (this.positions.containsKey(to) && this.positions.get(to).getTeam() == this.currentTeam) {
-      LOGGER.log(Level.WARNING, "Cannot attack same team from: " + from + " to: " + to + "!");
-      return null;
-    }
-    var moves = this.getAvailableMoves();
+
     var pieceToMove = this.positions.get(from);
-    if (moves.contains(new Move(from, to, pieceToMove.getPieceEnum(), true)) ||
-        moves.contains(new Move(from, to, pieceToMove.getPieceEnum(), false))) {
-      this.positions.remove(from);
-      pieceToMove.hasMoved();
-      this.positions.put(to, pieceToMove);
-      if ((pieceToMove.getPieceEnum().equals(Piece.PieceEnum.PAWN_W)
-          || pieceToMove.getPieceEnum().equals(Piece.PieceEnum.PAWN_B)) &&
-          Math.abs(from.rank() - to.rank()) == 2) {
+
+    // en passant handling
+    if ((pieceToMove.getPieceEnum().equals(Piece.PieceEnum.PAWN_W)
+        || pieceToMove.getPieceEnum().equals(Piece.PieceEnum.PAWN_B))) {
+      if (move.canAttack()) {
+        if (to.equals(this.enPassant)) {
+          this.enPassant = null;
+          if (pieceToMove.getPieceEnum().equals(Piece.PieceEnum.PAWN_W)) {
+            this.positions.remove(new Position(this.enPassant.file(), 5));
+          } else {
+            this.positions.remove(new Position(this.enPassant.file(), 4));
+          }
+        }
+      } else if (Math.abs(from.rank() - to.rank()) == 2){
         this.enPassant = new Position(from.file(), from.rank() + to.rank() / 2);
       }
-      this.currentTeam = (this.currentTeam == Team.WHITE ? Team.BLACK : Team.WHITE);
-      return this;
     }
-    LOGGER.log(Level.WARNING, "Could not move from " + from + " to: " + to + "!");
-    return null;
+
+    this.positions.remove(from);
+    pieceToMove.hasMoved();
+    this.positions.put(to, pieceToMove);
+
+    this.currentTeam = this.currentTeam == Team.WHITE ? Team.BLACK : Team.WHITE;
+    return this;
   }
 
   public Map.Entry<Position, Piece> findPieceOnBoard(Piece.PieceEnum piece) {
@@ -637,11 +645,14 @@ public class Board {
       if (pawn && currentPos.file() == c) {
         return null;
       }
-      if (this.positions.get(neighbourPos).getTeam() != this.currentTeam) {
+      if (!this.positions.get(neighbourPos).getTeam().equals(this.currentTeam)) {
         return new Move(currentPos, neighbourPos, piece, true);
       }
       return null;
     } else {
+      if (pawn && currentPos.file() != c) {
+        return null;
+      }
       return new Move(currentPos, neighbourPos, piece, false);
     }
   }
