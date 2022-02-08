@@ -2,10 +2,8 @@ package de.profschmergmann.models;
 
 import de.profschmergmann.models.Piece.PieceEnum;
 import de.profschmergmann.models.Piece.Team;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.Level;
@@ -18,8 +16,6 @@ public class Board {
 
   private static final Logger LOGGER = Logger.getLogger(Board.class.getName());
   private final HashMap<Position, Piece> positions = new HashMap<>();
-  private final List<Piece> attackedBlackPieces = new ArrayList<>();
-  private final List<Piece> attackedWhitePieces = new ArrayList<>();
   private Position enPassant;
   private Piece.Team currentTeam;
   private boolean whiteCanCastleKingSide;
@@ -331,32 +327,27 @@ public class Board {
   public Board move(Position from, Position to)
       throws IllegalArgumentException {
     if (!this.positions.containsKey(from)) {
-      throw new IllegalArgumentException("Move not possible from: " + from);
+      LOGGER.log(Level.WARNING,
+          "Move not possible from: " + from + " because there is no piece to move!");
+      return null;
     }
     if (this.positions.containsKey(to) && this.positions.get(to).getTeam() == this.currentTeam) {
-      throw new IllegalArgumentException("Cannot attack same team from: " + from + " to: " + to);
+      LOGGER.log(Level.WARNING, "Cannot attack same team from: " + from + " to: " + to + "!");
+      return null;
     }
-    if (this.getAvailableMoves()
-        .contains(new Move(from, to, this.positions.get(from).getPieceEnum(), true)) ||
-        this.getAvailableMoves()
-            .contains(new Move(from, to, this.positions.get(from).getPieceEnum(), false))) {
-      var pieceToMove = this.positions.get(from);
-      var pieceToAttack = this.positions.get(to);
-      if (pieceToAttack != null) {
-        switch (this.currentTeam) {
-          case WHITE -> this.attackedBlackPieces.add(pieceToAttack);
-          case BLACK -> this.attackedWhitePieces.add(pieceToAttack);
-        }
-      }
+    var moves = this.getAvailableMoves();
+    var pieceToMove = this.positions.get(from);
+    if (moves.contains(new Move(from, to, pieceToMove.getPieceEnum(), true)) ||
+        moves.contains(new Move(from, to, pieceToMove.getPieceEnum(), false))) {
       this.positions.remove(from);
       pieceToMove.hasMoved();
       this.positions.put(to, pieceToMove);
       if ((pieceToMove.getPieceEnum().equals(Piece.PieceEnum.PAWN_W)
           || pieceToMove.getPieceEnum().equals(Piece.PieceEnum.PAWN_B)) &&
           Math.abs(from.rank() - to.rank()) == 2) {
-        this.enPassant = new Position(from.file(),
-            from.rank() + to.rank() / 2);
+        this.enPassant = new Position(from.file(), from.rank() + to.rank() / 2);
       }
+      this.currentTeam = (this.currentTeam == Team.WHITE ? Team.BLACK : Team.WHITE);
       return this;
     }
     LOGGER.log(Level.WARNING, "Could not move from " + from + " to: " + to + "!");
@@ -392,12 +383,19 @@ public class Board {
       var piece = entry.getValue().getPieceEnum();
       char c;
       int i;
+      Move move;
       if (piece == PieceEnum.BISHOP_W || piece == PieceEnum.BISHOP_B ||
           piece == PieceEnum.QUEEN_W || piece == PieceEnum.QUEEN_B) {
         c = (char) (currentPos.file() - 1);
         i = currentPos.rank() + 1;
         while (c >= 'a' && i <= 8) {
-          if (this.addMoveToSetIfPossible(this.currentTeam, set, currentPos, piece, c, i)) {
+          move = this.createMoveIfPossible(currentPos, piece, c, i);
+          if (move != null) {
+            set.add(move);
+            if (move.canAttack()) {
+              break;
+            }
+          } else {
             break;
           }
           c--;
@@ -406,7 +404,13 @@ public class Board {
         c = (char) (currentPos.file() + 1);
         i = currentPos.rank() + 1;
         while (c <= 'h' && i <= 8) {
-          if (this.addMoveToSetIfPossible(this.currentTeam, set, currentPos, piece, c, i)) {
+          move = this.createMoveIfPossible(currentPos, piece, c, i);
+          if (move != null) {
+            set.add(move);
+            if (move.canAttack()) {
+              break;
+            }
+          } else {
             break;
           }
           c++;
@@ -415,7 +419,13 @@ public class Board {
         c = (char) (currentPos.file() + 1);
         i = currentPos.rank() - 1;
         while (c <= 'h' && i >= 1) {
-          if (this.addMoveToSetIfPossible(this.currentTeam, set, currentPos, piece, c, i)) {
+          move = this.createMoveIfPossible(currentPos, piece, c, i);
+          if (move != null) {
+            set.add(move);
+            if (move.canAttack()) {
+              break;
+            }
+          } else {
             break;
           }
           c++;
@@ -424,7 +434,13 @@ public class Board {
         c = (char) (currentPos.file() - 1);
         i = currentPos.rank() - 1;
         while (c >= 'a' && i >= 1) {
-          if (this.addMoveToSetIfPossible(this.currentTeam, set, currentPos, piece, c, i)) {
+          move = this.createMoveIfPossible(currentPos, piece, c, i);
+          if (move != null) {
+            set.add(move);
+            if (move.canAttack()) {
+              break;
+            }
+          } else {
             break;
           }
           c--;
@@ -442,7 +458,10 @@ public class Board {
                 currentPos.file() == c && currentPos.rank() == i - 1 ||
                 currentPos.file() + 1 == c && currentPos.rank() - 1 == i ||
                 currentPos.file() - 1 == c && currentPos.rank() == i) {
-              this.addMoveToSetIfPossible(this.currentTeam, set, currentPos, piece, c, i);
+              move = this.createMoveIfPossible(currentPos, piece, c, i);
+              if (move != null) {
+                set.add(move);
+              }
             }
           }
         }
@@ -458,7 +477,10 @@ public class Board {
                 currentPos.file() + 1 == c && currentPos.rank() - 2 == i ||
                 currentPos.file() - 1 == c && currentPos.rank() - 2 == i ||
                 currentPos.file() - 2 == c && currentPos.rank() - 1 == i) {
-              this.addMoveToSetIfPossible(this.currentTeam, set, currentPos, piece, c, i);
+              move = this.createMoveIfPossible(currentPos, piece, c, i);
+              if (move != null) {
+                set.add(move);
+              }
             }
           }
         }
@@ -467,41 +489,67 @@ public class Board {
         switch (this.currentTeam) {
           case WHITE -> {
             if (currentPos.rank() + 1 <= 8) {
-              this.addMoveToSetIfPossible(this.currentTeam, set, currentPos, piece,
-                  currentPos.file(),
-                  currentPos.rank() + 1);
+              c = currentPos.file();
+              i = currentPos.rank() + 1;
+              move = this.createMoveIfPossible(currentPos, piece, c, i);
+              if (move != null) {
+                set.add(move);
+              }
               if (currentPos.rank() == 2) {
-                this.addMoveToSetIfPossible(this.currentTeam, set, currentPos, piece,
-                    currentPos.file(),
-                    currentPos.rank() + 2);
+                i = currentPos.rank() + 2;
+                move = this.createMoveIfPossible(currentPos, piece, c, i);
+                if (move != null) {
+                  set.add(move);
+                }
               }
               if (currentPos.file() + 1 <= 'h') {
-                this.addMoveToSetIfPossible(this.currentTeam, set, currentPos, piece,
-                    (char) (currentPos.file() + 1), currentPos.rank() + 1);
+                c = (char) (currentPos.file() + 1);
+                i = currentPos.rank() + 1;
+                move = this.createMoveIfPossible(currentPos, piece, c, i);
+                if (move != null) {
+                  set.add(move);
+                }
               }
               if (currentPos.file() - 1 >= 'a') {
-                this.addMoveToSetIfPossible(this.currentTeam, set, currentPos, piece,
-                    (char) (currentPos.file() - 1), currentPos.rank() + 1);
+                c = (char) (currentPos.file() - 1);
+                i = currentPos.rank() + 1;
+                move = this.createMoveIfPossible(currentPos, piece, c, i);
+                if (move != null) {
+                  set.add(move);
+                }
               }
             }
           }
           case BLACK -> {
             if (currentPos.rank() - 1 >= 1) {
-              this.addMoveToSetIfPossible(this.currentTeam, set, currentPos, piece,
-                  currentPos.file(),
-                  currentPos.rank() - 1);
+              c = currentPos.file();
+              i = currentPos.rank() - 1;
+              move = this.createMoveIfPossible(currentPos, piece, c, i);
+              if (move != null) {
+                set.add(move);
+              }
               if (currentPos.rank() == 7) {
-                this.addMoveToSetIfPossible(this.currentTeam, set, currentPos, piece,
-                    currentPos.file(),
-                    currentPos.rank() - 2);
+                i = currentPos.rank() - 2;
+                move = this.createMoveIfPossible(currentPos, piece, c, i);
+                if (move != null) {
+                  set.add(move);
+                }
               }
               if (currentPos.file() + 1 <= 'h') {
-                this.addMoveToSetIfPossible(this.currentTeam, set, currentPos, piece,
-                    (char) (currentPos.file() + 1), currentPos.rank() - 1);
+                c = (char) (currentPos.file() + 1);
+                i = currentPos.rank() - 1;
+                move = this.createMoveIfPossible(currentPos, piece, c, i);
+                if (move != null) {
+                  set.add(move);
+                }
               }
               if (currentPos.file() - 1 >= 'a') {
-                this.addMoveToSetIfPossible(this.currentTeam, set, currentPos, piece,
-                    (char) (currentPos.file() - 1), currentPos.rank() - 1);
+                c = (char) (currentPos.file() - 1);
+                i = currentPos.rank() - 1;
+                move = this.createMoveIfPossible(currentPos, piece, c, i);
+                if (move != null) {
+                  set.add(move);
+                }
               }
             }
           }
@@ -510,33 +558,57 @@ public class Board {
       if (piece == PieceEnum.ROOK_W || piece == PieceEnum.ROOK_B ||
           piece == PieceEnum.QUEEN_W || piece == PieceEnum.QUEEN_B) {
         c = (char) (currentPos.file() - 1);
+        i = currentPos.rank();
         while (c >= 'a') {
-          if (this.addMoveToSetIfPossible(this.currentTeam, set, currentPos, piece, c,
-              currentPos.rank())) {
+          move = this.createMoveIfPossible(currentPos, piece, c, i);
+          if (move != null) {
+            set.add(move);
+            if (move.canAttack()) {
+              break;
+            }
+          } else {
             break;
           }
           c--;
         }
         i = currentPos.rank() + 1;
+        c = currentPos.file();
         while (i <= 8) {
-          if (this.addMoveToSetIfPossible(this.currentTeam, set, currentPos, piece,
-              currentPos.file(), i)) {
+          move = this.createMoveIfPossible(currentPos, piece, c, i);
+          if (move != null) {
+            set.add(move);
+            if (move.canAttack()) {
+              break;
+            }
+          } else {
             break;
           }
           i++;
         }
         c = (char) (currentPos.file() + 1);
+        i = currentPos.rank();
         while (c <= 'h') {
-          if (this.addMoveToSetIfPossible(this.currentTeam, set, currentPos, piece, c,
-              currentPos.rank())) {
+          move = this.createMoveIfPossible(currentPos, piece, c, i);
+          if (move != null) {
+            set.add(move);
+            if (move.canAttack()) {
+              break;
+            }
+          } else {
             break;
           }
           c++;
         }
+        c = currentPos.file();
         i = currentPos.rank() - 1;
         while (i >= 1) {
-          if (this.addMoveToSetIfPossible(this.currentTeam, set, currentPos, piece,
-              currentPos.file(), i)) {
+          move = this.createMoveIfPossible(currentPos, piece, c, i);
+          if (move != null) {
+            set.add(move);
+            if (move.canAttack()) {
+              break;
+            }
+          } else {
             break;
           }
           i--;
@@ -547,38 +619,30 @@ public class Board {
   }
 
   /**
-   * Helper method which adds the move to the set if it is possible.
+   * Helper method which creates the move if it is possible.
    *
-   * @param team       the team to move with
-   * @param set        the set where the move should be added to
    * @param currentPos the current position
    * @param piece      the piece to move
    * @param c          the file
    * @param i          the rank
-   * @return true if it worked, else false
+   * @return the move or null
    */
-  private boolean addMoveToSetIfPossible(Piece.Team team, HashSet<Move> set, Position currentPos,
-      Piece.PieceEnum piece, char c, int i) {
+  private Move createMoveIfPossible(Position currentPos, Piece.PieceEnum piece, char c, int i) {
     var neighbourPos = new Position(c, i);
-    if (this.enPassantPossible() && neighbourPos.equals(this.enPassant)) {
-      set.add(new Move(currentPos, neighbourPos, piece, true));
-      return true;
+    var pawn = piece.equals(Piece.PieceEnum.PAWN_B) || piece.equals(Piece.PieceEnum.PAWN_W);
+    if (pawn && this.enPassantPossible() && neighbourPos.equals(this.enPassant)) {
+      return new Move(currentPos, neighbourPos, piece, true);
     }
-    var pawn = piece.equals(Piece.PieceEnum.PAWN_B) ||
-        piece.equals(Piece.PieceEnum.PAWN_W);
     if (this.positions.containsKey(neighbourPos)) {
       if (pawn && currentPos.file() == c) {
-        return false;
+        return null;
       }
-      if (this.positions.get(neighbourPos).getTeam() != team) {
-        set.add(new Move(currentPos, neighbourPos, piece, true));
+      if (this.positions.get(neighbourPos).getTeam() != this.currentTeam) {
+        return new Move(currentPos, neighbourPos, piece, true);
       }
-      return true;
+      return null;
+    } else {
+      return new Move(currentPos, neighbourPos, piece, false);
     }
-    if (pawn && currentPos.file() != c) {
-      return false;
-    }
-    set.add(new Move(currentPos, neighbourPos, piece, false));
-    return false;
   }
 }

@@ -6,7 +6,7 @@ import java.util.logging.Logger;
 /**
  * Record position for storing a position like a1.
  */
-public record Position(char file, int rank) {
+public record Position(char file, int rank) implements Comparable<Position> {
 
   private static final Logger LOGGER = Logger.getLogger(Position.class.getName());
 
@@ -41,5 +41,16 @@ public record Position(char file, int rank) {
   @Override
   public String toString() {
     return this.file + "" + this.rank;
+  }
+
+  @Override
+  public int compareTo(Position o) {
+    if (this.file != o.file) {
+      return this.file - o.file;
+    }
+    if (this.rank != o.rank) {
+      return this.rank - o.rank;
+    }
+    return 0;
   }
 }
