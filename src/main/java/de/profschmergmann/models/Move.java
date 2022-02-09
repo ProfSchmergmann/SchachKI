@@ -18,7 +18,7 @@ public record Move(Position from, Position to, Piece.PieceEnum piece, boolean ca
     if (o == null || this.getClass() != o.getClass()) {
       return false;
     }
-    Move move = (Move) o;
+    var move = (Move) o;
     return this.canAttack == move.canAttack &&
         this.from.equals(move.from) &&
         this.to.equals(move.to) &&

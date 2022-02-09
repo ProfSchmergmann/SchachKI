@@ -1,11 +1,15 @@
 package de.profschmergmann.models;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /**
- * Dataclass piece for holding a single chess peace with its team. This record also has a team and a
+ * Class piece for holding a single chess peace with its team. This class also has a team and a
  * piece enum for returning SAN values.
  */
 public class Piece {
 
+  private static final Logger LOGGER = Logger.getLogger(Piece.class.getName());
   private final PieceEnum pieceEnum;
   private boolean hasMoved;
 
@@ -15,6 +19,7 @@ public class Piece {
   public Piece(PieceEnum pieceEnum) {
     this.pieceEnum = pieceEnum;
     this.hasMoved = false;
+    LOGGER.log(Level.FINE, "Created new piece: " + pieceEnum);
   }
 
   /**
@@ -77,8 +82,9 @@ public class Piece {
     if (o == null || this.getClass() != o.getClass()) {
       return false;
     }
-    Piece piece1 = (Piece) o;
-    return this.hasMoved == piece1.hasMoved && this.pieceEnum == piece1.pieceEnum;
+    var piece = (Piece) o;
+    return this.hasMoved == piece.hasMoved &&
+        this.pieceEnum == piece.pieceEnum;
   }
 
   /**

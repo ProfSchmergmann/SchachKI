@@ -79,6 +79,11 @@ public class Game {
     return this.getCurrentBoard().getCurrentTeam();
   }
 
+  /**
+   * Method for computing if the king is checked on the current board.
+   *
+   * @return true if yes, else false
+   */
   public boolean isChecked() {
     return this.getCurrentBoard().isChecked();
   }
