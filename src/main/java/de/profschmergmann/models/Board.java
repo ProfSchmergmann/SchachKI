@@ -26,6 +26,8 @@ public class Board {
   private HashSet<Move> availableMoves;
   private int movesGeneratorCounter;
 
+  //region Constructors
+
   /**
    * Constructor without parameters which produces an initial chess field.
    */
@@ -95,6 +97,9 @@ public class Board {
     }
     LOGGER.log(Level.FINE, "Set figures at board with FEN-Record: " + FENRecordFigures);
   }
+  //endregion
+
+  //region Getters and Setters
 
   /**
    * Getter for current team.
@@ -258,6 +263,7 @@ public class Board {
   public HashMap<Position, Piece> getPositions() {
     return this.positions;
   }
+  //endregion
 
   /**
    * Initializes a starting chess game board.
@@ -347,7 +353,7 @@ public class Board {
 
     var pieceToMove = this.positions.get(from);
 
-    // en passant handling
+    //region en passant handling
     if ((pieceToMove.getPieceEnum().equals(Piece.PieceEnum.PAWN_W)
         || pieceToMove.getPieceEnum().equals(Piece.PieceEnum.PAWN_B))) {
       if (move.canAttack()) {
@@ -364,6 +370,34 @@ public class Board {
       }
       this.halfMoves++;
     }
+    //endregion
+
+    //region castling handling
+    if (pieceToMove.getPieceEnum().equals(PieceEnum.KING_W) && pieceToMove.hasMoved()) {
+      this.setWhiteCanCastleKingSide(false);
+      this.setWhiteCanCastleQueenSide(false);
+    }
+    if (pieceToMove.getPieceEnum().equals(PieceEnum.KING_B) && pieceToMove.hasMoved()) {
+      this.setBlackCanCastleKingSide(false);
+      this.setBlackCanCastleQueenSide(false);
+    }
+    if (this.whiteCanCastleQueenSide && this.positions.containsKey(new Position('a', 1)) &&
+        !this.positions.get(new Position('a', 1)).getPieceEnum().equals(PieceEnum.ROOK_W)) {
+      this.setWhiteCanCastleQueenSide(false);
+    }
+    if (this.whiteCanCastleKingSide && this.positions.containsKey(new Position('h', 1)) &&
+        !this.positions.get(new Position('h', 1)).getPieceEnum().equals(PieceEnum.ROOK_W)) {
+      this.setWhiteCanCastleKingSide(false);
+    }
+    if (this.blackCanCastleQueenSide && this.positions.containsKey(new Position('a', 8)) &&
+        !this.positions.get(new Position('a', 8)).getPieceEnum().equals(PieceEnum.ROOK_B)) {
+      this.setBlackCanCastleQueenSide(false);
+    }
+    if (this.blackCanCastleKingSide && this.positions.containsKey(new Position('h', 8)) &&
+        !this.positions.get(new Position('h', 8)).getPieceEnum().equals(PieceEnum.ROOK_B)) {
+      this.setBlackCanCastleKingSide(false);
+    }
+    //endregion
 
     this.positions.remove(from);
     pieceToMove.hasMoved();
@@ -433,139 +467,79 @@ public class Board {
         .filter(entry -> entry.getValue().getTeam().equals(team))
         .forEach(entry -> {
           var currentPos = entry.getKey();
-          var piece = entry.getValue().getPieceEnum();
+          var pieceEnum = entry.getValue().getPieceEnum();
           char c;
           int i;
           Move move;
-          if (piece == PieceEnum.BISHOP_W || piece == PieceEnum.BISHOP_B ||
-              piece == PieceEnum.QUEEN_W || piece == PieceEnum.QUEEN_B) {
-            c = (char) (currentPos.file() - 1);
-            i = currentPos.rank() + 1;
-            while (c >= 'a' && i <= 8) {
-              move = this.createMoveIfPossible(currentPos, piece, c, i);
-              if (move != null) {
-                set.add(move);
-                if (move.canAttack()) {
-                  break;
-                }
-              } else {
-                break;
-              }
-              c--;
-              i++;
-            }
-            c = (char) (currentPos.file() + 1);
-            i = currentPos.rank() + 1;
-            while (c <= 'h' && i <= 8) {
-              move = this.createMoveIfPossible(currentPos, piece, c, i);
-              if (move != null) {
-                set.add(move);
-                if (move.canAttack()) {
-                  break;
-                }
-              } else {
-                break;
-              }
-              c++;
-              i++;
-            }
-            c = (char) (currentPos.file() + 1);
-            i = currentPos.rank() - 1;
-            while (c <= 'h' && i >= 1) {
-              move = this.createMoveIfPossible(currentPos, piece, c, i);
-              if (move != null) {
-                set.add(move);
-                if (move.canAttack()) {
-                  break;
-                }
-              } else {
-                break;
-              }
-              c++;
-              i--;
-            }
-            c = (char) (currentPos.file() - 1);
-            i = currentPos.rank() - 1;
-            while (c >= 'a' && i >= 1) {
-              move = this.createMoveIfPossible(currentPos, piece, c, i);
-              if (move != null) {
-                set.add(move);
-                if (move.canAttack()) {
-                  break;
-                }
-              } else {
-                break;
-              }
-              c--;
-              i--;
-            }
-          }
-          if (piece == PieceEnum.KING_W || piece == PieceEnum.KING_B) {
-            for (c = 'a'; c <= 'h'; c++) {
-              for (i = 1; i <= 8; i++) {
-                if ((char) (currentPos.file() - 1) == c && currentPos.rank() + 1 == i ||
-                    currentPos.file() == c && currentPos.rank() + 1 == i ||
-                    (char) (currentPos.file() + 1) == c && currentPos.rank() + 1 == i ||
-                    (char) (currentPos.file() + 1) == c && currentPos.rank() == i ||
-                    (char) (currentPos.file() - 1) == c && currentPos.rank() - 1 == i ||
-                    currentPos.file() == c && currentPos.rank() == i - 1 ||
-                    (char) (currentPos.file() + 1) == c && currentPos.rank() - 1 == i ||
-                    (char) (currentPos.file() - 1) == c && currentPos.rank() == i) {
-                  move = this.createMoveIfPossible(currentPos, piece, c, i);
-                  if (move != null) {
-                    set.add(move);
+          switch (pieceEnum) {
+            case KING_B, KING_W -> {
+              for (c = 'a'; c <= 'h'; c++) {
+                for (i = 1; i <= 8; i++) {
+                  if ((char) (currentPos.file() - 1) == c && currentPos.rank() + 1 == i ||
+                      currentPos.file() == c && currentPos.rank() + 1 == i ||
+                      (char) (currentPos.file() + 1) == c && currentPos.rank() + 1 == i ||
+                      (char) (currentPos.file() + 1) == c && currentPos.rank() == i ||
+                      (char) (currentPos.file() - 1) == c && currentPos.rank() - 1 == i ||
+                      currentPos.file() == c && currentPos.rank() == i - 1 ||
+                      (char) (currentPos.file() + 1) == c && currentPos.rank() - 1 == i ||
+                      (char) (currentPos.file() - 1) == c && currentPos.rank() == i) {
+                    move = this.createMoveIfPossible(currentPos, pieceEnum, new Position(c, i));
+                    if (move != null) {
+                      set.add(move);
+                    }
                   }
                 }
               }
             }
-          }
-          if (piece == PieceEnum.KNIGHT_W || piece == PieceEnum.KNIGHT_B) {
-            for (c = 'a'; c <= 'h'; c++) {
-              for (i = 1; i <= 8; i++) {
-                if ((char) (currentPos.file() - 2) == c && currentPos.rank() + 1 == i ||
-                    (char) (currentPos.file() - 1) == c && currentPos.rank() + 2 == i ||
-                    (char) (currentPos.file() + 1) == c && currentPos.rank() + 2 == i ||
-                    (char) (currentPos.file() + 2) == c && currentPos.rank() + 1 == i ||
-                    (char) (currentPos.file() + 2) == c && currentPos.rank() - 1 == i ||
-                    (char) (currentPos.file() + 1) == c && currentPos.rank() - 2 == i ||
-                    (char) (currentPos.file() - 1) == c && currentPos.rank() - 2 == i ||
-                    (char) (currentPos.file() - 2) == c && currentPos.rank() - 1 == i) {
-                  move = this.createMoveIfPossible(currentPos, piece, c, i);
-                  if (move != null) {
-                    set.add(move);
-                  }
-                }
-              }
-            }
-          }
-          if (piece == PieceEnum.PAWN_W || piece == PieceEnum.PAWN_B) {
-            switch (this.currentTeam) {
-              case WHITE -> {
+            case PAWN_B, PAWN_W -> {
+              var positionsToAdd = new HashSet<Position>();
+              c = currentPos.file();
+              if (pieceEnum.equals(PieceEnum.PAWN_W)) {
                 i = currentPos.rank() + 1;
                 if (i <= 8) {
-                  c = currentPos.file();
-                  move = this.createMoveIfPossible(currentPos, piece, c, i);
-                  if (move != null) {
-                    set.add(move);
-                  }
+                  positionsToAdd.add(new Position(c, i));
                   if (currentPos.rank() == 2) {
-                    move = this.createMoveIfPossible(currentPos, piece, c, i + 1);
-                    if (move != null) {
-                      set.add(move);
-                    }
+                    positionsToAdd.add(new Position(c, 3));
                   }
                 }
-              }
-              case BLACK -> {
+              } else {
                 i = currentPos.rank() - 1;
                 if (i >= 1) {
-                  c = currentPos.file();
-                  move = this.createMoveIfPossible(currentPos, piece, c, i);
+                  positionsToAdd.add(new Position(c, i));
+                  if (currentPos.rank() == 7) {
+                    positionsToAdd.add(new Position(c, 6));
+                  }
+                }
+              }
+              if (i >= 1 && i<= 8) {
+                c = (char) (currentPos.file() + 1);
+                if (c <= 'h') {
+                  positionsToAdd.add(new Position(c, i));
+                }
+                c = (char) (currentPos.file() - 1);
+                if (c >= 'a') {
+                  positionsToAdd.add(new Position(c, i));
+                }
+                for (Position position : positionsToAdd) {
+                  move = this.createMoveIfPossible(currentPos, pieceEnum, position);
                   if (move != null) {
                     set.add(move);
                   }
-                  if (currentPos.rank() == 7) {
-                    move = this.createMoveIfPossible(currentPos, piece, c, i - 2);
+                }
+              }
+            }
+            case KNIGHT_B, KNIGHT_W -> {
+              for (c = 'a'; c <= 'h'; c++) {
+                for (i = 1; i <= 8; i++) {
+                  if ((char) (currentPos.file() - 2) == c && currentPos.rank() + 1 == i ||
+                      (char) (currentPos.file() - 1) == c && currentPos.rank() + 2 == i ||
+                      (char) (currentPos.file() + 1) == c && currentPos.rank() + 2 == i ||
+                      (char) (currentPos.file() + 2) == c && currentPos.rank() + 1 == i ||
+                      (char) (currentPos.file() + 2) == c && currentPos.rank() - 1 == i ||
+                      (char) (currentPos.file() + 1) == c && currentPos.rank() - 2 == i ||
+                      (char) (currentPos.file() - 1) == c && currentPos.rank() - 2 == i ||
+                      (char) (currentPos.file() - 2) == c && currentPos.rank() - 1 == i) {
+                    move = this.createMoveIfPossible(currentPos, pieceEnum, new Position(c, i));
                     if (move != null) {
                       set.add(move);
                     }
@@ -573,79 +547,133 @@ public class Board {
                 }
               }
             }
-            i = piece == PieceEnum.PAWN_W ? currentPos.rank() + 1 : currentPos.rank() - 1;
-            c = (char) (currentPos.file() + 1);
-            if (c <= 'h') {
-              move = this.createMoveIfPossible(currentPos, piece, c, i);
-              if (move != null) {
-                set.add(move);
-              }
-            }
-            c = (char) (currentPos.file() - 1);
-            if (c >= 'a') {
-              move = this.createMoveIfPossible(currentPos, piece, c, i);
-              if (move != null) {
-                set.add(move);
-              }
-            }
-          }
-          if (piece == PieceEnum.ROOK_W || piece == PieceEnum.ROOK_B ||
-              piece == PieceEnum.QUEEN_W || piece == PieceEnum.QUEEN_B) {
-            c = (char) (currentPos.file() - 1);
-            i = currentPos.rank();
-            while (c >= 'a') {
-              move = this.createMoveIfPossible(currentPos, piece, c, i);
-              if (move != null) {
-                set.add(move);
-                if (move.canAttack()) {
-                  break;
+            case BISHOP_B, BISHOP_W, ROOK_B, ROOK_W, QUEEN_B, QUEEN_W -> {
+              //region Bishop, Queen
+              if (pieceEnum == PieceEnum.BISHOP_W || pieceEnum == PieceEnum.BISHOP_B ||
+                  pieceEnum == PieceEnum.QUEEN_W || pieceEnum == PieceEnum.QUEEN_B) {
+                c = (char) (currentPos.file() - 1);
+                i = currentPos.rank() + 1;
+                while (c >= 'a' && i <= 8) {
+                  move = this.createMoveIfPossible(currentPos, pieceEnum, new Position(c, i));
+                  if (move != null) {
+                    set.add(move);
+                    if (move.canAttack()) {
+                      break;
+                    }
+                  } else {
+                    break;
+                  }
+                  c--;
+                  i++;
                 }
-              } else {
-                break;
-              }
-              c--;
-            }
-            i = currentPos.rank() + 1;
-            c = currentPos.file();
-            while (i <= 8) {
-              move = this.createMoveIfPossible(currentPos, piece, c, i);
-              if (move != null) {
-                set.add(move);
-                if (move.canAttack()) {
-                  break;
+                c = (char) (currentPos.file() + 1);
+                i = currentPos.rank() + 1;
+                while (c <= 'h' && i <= 8) {
+                  move = this.createMoveIfPossible(currentPos, pieceEnum, new Position(c, i));
+                  if (move != null) {
+                    set.add(move);
+                    if (move.canAttack()) {
+                      break;
+                    }
+                  } else {
+                    break;
+                  }
+                  c++;
+                  i++;
                 }
-              } else {
-                break;
-              }
-              i++;
-            }
-            c = (char) (currentPos.file() + 1);
-            i = currentPos.rank();
-            while (c <= 'h') {
-              move = this.createMoveIfPossible(currentPos, piece, c, i);
-              if (move != null) {
-                set.add(move);
-                if (move.canAttack()) {
-                  break;
+                c = (char) (currentPos.file() + 1);
+                i = currentPos.rank() - 1;
+                while (c <= 'h' && i >= 1) {
+                  move = this.createMoveIfPossible(currentPos, pieceEnum, new Position(c, i));
+                  if (move != null) {
+                    set.add(move);
+                    if (move.canAttack()) {
+                      break;
+                    }
+                  } else {
+                    break;
+                  }
+                  c++;
+                  i--;
                 }
-              } else {
-                break;
-              }
-              c++;
-            }
-            c = currentPos.file();
-            i = currentPos.rank() - 1;
-            while (i >= 1) {
-              move = this.createMoveIfPossible(currentPos, piece, c, i);
-              if (move != null) {
-                set.add(move);
-                if (move.canAttack()) {
-                  break;
+                c = (char) (currentPos.file() - 1);
+                i = currentPos.rank() - 1;
+                while (c >= 'a' && i >= 1) {
+                  move = this.createMoveIfPossible(currentPos, pieceEnum, new Position(c, i));
+                  if (move != null) {
+                    set.add(move);
+                    if (move.canAttack()) {
+                      break;
+                    }
+                  } else {
+                    break;
+                  }
+                  c--;
+                  i--;
                 }
-              } else {
-                break;
               }
-              i--;
+              //endregion
+              //region Rook, Queen
+              if (pieceEnum == PieceEnum.ROOK_W || pieceEnum == PieceEnum.ROOK_B ||
+                  pieceEnum == PieceEnum.QUEEN_W || pieceEnum == PieceEnum.QUEEN_B) {
+                c = (char) (currentPos.file() - 1);
+                i = currentPos.rank();
+                while (c >= 'a') {
+                  move = this.createMoveIfPossible(currentPos, pieceEnum, new Position(c, i));
+                  if (move != null) {
+                    set.add(move);
+                    if (move.canAttack()) {
+                      break;
+                    }
+                  } else {
+                    break;
+                  }
+                  c--;
+                }
+                i = currentPos.rank() + 1;
+                c = currentPos.file();
+                while (i <= 8) {
+                  move = this.createMoveIfPossible(currentPos, pieceEnum, new Position(c, i));
+                  if (move != null) {
+                    set.add(move);
+                    if (move.canAttack()) {
+                      break;
+                    }
+                  } else {
+                    break;
+                  }
+                  i++;
+                }
+                c = (char) (currentPos.file() + 1);
+                i = currentPos.rank();
+                while (c <= 'h') {
+                  move = this.createMoveIfPossible(currentPos, pieceEnum, new Position(c, i));
+                  if (move != null) {
+                    set.add(move);
+                    if (move.canAttack()) {
+                      break;
+                    }
+                  } else {
+                    break;
+                  }
+                  c++;
+                }
+                c = currentPos.file();
+                i = currentPos.rank() - 1;
+                while (i >= 1) {
+                  move = this.createMoveIfPossible(currentPos, pieceEnum, new Position(c, i));
+                  if (move != null) {
+                    set.add(move);
+                    if (move.canAttack()) {
+                      break;
+                    }
+                  } else {
+                    break;
+                  }
+                  i--;
+                }
+              }
+              //endregion
             }
           }
         });
@@ -655,20 +683,19 @@ public class Board {
   /**
    * Helper method which creates the move if it is possible.
    *
-   * @param currentPos the current position
-   * @param piece      the piece to move
-   * @param c          the file
-   * @param i          the rank
+   * @param currentPos   the current position
+   * @param piece        the piece to move
+   * @param neighbourPos the neighbour position to check
    * @return the move or null
    */
-  private Move createMoveIfPossible(Position currentPos, Piece.PieceEnum piece, char c, int i) {
-    var neighbourPos = new Position(c, i);
+  private Move createMoveIfPossible(Position currentPos, Piece.PieceEnum piece,
+      Position neighbourPos) {
     var pawn = piece.equals(Piece.PieceEnum.PAWN_B) || piece.equals(Piece.PieceEnum.PAWN_W);
     if (pawn && this.enPassantPossible() && neighbourPos.equals(this.enPassant)) {
       return new Move(currentPos, neighbourPos, piece, true);
     }
     if (this.positions.containsKey(neighbourPos)) {
-      if (pawn && currentPos.file() == c) {
+      if (pawn && currentPos.file() == neighbourPos.file()) {
         return null;
       }
       if (!this.positions.get(neighbourPos).getTeam().equals(this.currentTeam)) {
@@ -676,7 +703,7 @@ public class Board {
       }
       return null;
     } else {
-      if (pawn && currentPos.file() != c) {
+      if (pawn && currentPos.file() != neighbourPos.file()) {
         return null;
       }
       return new Move(currentPos, neighbourPos, piece, false);
