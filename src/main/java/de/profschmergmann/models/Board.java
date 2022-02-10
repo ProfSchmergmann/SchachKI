@@ -25,6 +25,8 @@ public class Board {
   private int fullMoves;
   private HashSet<Move> availableMoves;
   private int movesGeneratorCounter;
+  private boolean whiteChecked;
+  private boolean blackChecked;
 
   //region Constructors
 
@@ -41,6 +43,8 @@ public class Board {
     this.halfMoves = 0;
     this.fullMoves = 0;
     this.availableMoves = this.getAllAvailableMoves(Team.WHITE);
+    this.whiteChecked = false;
+    this.blackChecked = false;
     LOGGER.log(Level.FINE, "Initialized new board with starting values.");
   }
 
@@ -399,6 +403,15 @@ public class Board {
     }
     //endregion
 
+    //region check handling
+    if (pieceToMove.getPieceEnum().equals(PieceEnum.KING_B)) {
+      this.blackChecked = false;
+    }
+    if (pieceToMove.getPieceEnum().equals(PieceEnum.KING_W)) {
+      this.whiteChecked = false;
+    }
+    //endregion
+
     this.positions.remove(from);
     pieceToMove.hasMoved();
     this.positions.put(to, pieceToMove);
@@ -425,19 +438,15 @@ public class Board {
   }
 
   /**
-   * Method for computing if the king of the current team is checked.
+   * Getter for checking.
    *
    * @return true if the king is checked by any other piece, else false
    */
   public boolean isChecked() {
-    var opponentTeam = this.currentTeam == Team.WHITE ? Team.BLACK : Team.WHITE;
-    var positionKingPair = this.findPieceOnBoard(
-        this.currentTeam == Team.WHITE ? PieceEnum.KING_W : PieceEnum.KING_B);
-    if (positionKingPair != null) {
-      return this.getAllAvailableMoves(opponentTeam).stream()
-          .anyMatch(move -> move.canAttack() && move.to().equals(positionKingPair.getKey()));
+    if (this.currentTeam == Team.WHITE) {
+      return this.whiteChecked;
     }
-    return false;
+    return this.blackChecked;
   }
 
   /**
@@ -511,7 +520,7 @@ public class Board {
                   }
                 }
               }
-              if (i >= 1 && i<= 8) {
+              if (i >= 1 && i <= 8) {
                 c = (char) (currentPos.file() + 1);
                 if (c <= 'h') {
                   positionsToAdd.add(new Position(c, i));
@@ -677,6 +686,29 @@ public class Board {
             }
           }
         });
+    //region check handling
+    var king = this.findPieceOnBoard(team == Team.WHITE ? PieceEnum.KING_B : PieceEnum.KING_W);
+    var attackingPositions = set.stream()
+        .filter(Move::canAttack)
+        .map(Move::to)
+        .filter(position -> position.equals(king.getKey()))
+        .toList();
+    if (!attackingPositions.isEmpty()) {
+      if (team == Team.WHITE) {
+        this.blackChecked = true;
+      } else {
+        this.whiteChecked = true;
+      }
+    }
+    if (team == Team.WHITE && this.whiteChecked || team == Team.BLACK && this.blackChecked) {
+      set.removeIf(move -> !move.piece().equals(king.getValue().getPieceEnum()));
+      set.removeIf(move -> attackingPositions.contains(move.to()));
+      if (!set.isEmpty()) {
+        LOGGER.log(Level.WARNING, king.getValue().getPieceEnum() + " is checked by\n");
+        set.forEach(move -> LOGGER.log(Level.WARNING, move.toString()));
+      }
+    }
+    //endregion
     return set;
   }
 
