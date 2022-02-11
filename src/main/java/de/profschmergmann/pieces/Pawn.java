@@ -1,7 +1,4 @@
-package de.profschmergmann.sad.pieces;
-
-import de.profschmergmann.sad.Position;
-import java.util.HashSet;
+package de.profschmergmann.pieces;
 
 public class Pawn extends Piece {
 
@@ -14,21 +11,6 @@ public class Pawn extends Piece {
     this.promoted = false;
     this.promoteTo = null;
     this.moveDirection = pieceColor == PieceColor.W ? MoveDirection.UP : MoveDirection.DOWN;
-  }
-
-  @Override
-  public HashSet<Position> possibleMoves() {
-    return null;
-  }
-
-  @Override
-  public HashSet<Position> positionsToAttack() {
-    return null;
-  }
-
-  @Override
-  public HashSet<Position> captureFreeMoves() {
-    return null;
   }
 
   @Override

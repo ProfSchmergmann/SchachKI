@@ -1,4 +1,4 @@
-package de.profschmergmann.sad.players;
+package de.profschmergmann.players;
 
 public class HumanPlayer implements PlayerEngine {
 

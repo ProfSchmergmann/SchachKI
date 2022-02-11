@@ -1,22 +1,27 @@
-package de.profschmergmann.models;
+package de.profschmergmann;
 
-import de.profschmergmann.models.Piece.PieceEnum;
-import de.profschmergmann.models.Piece.Team;
+import de.profschmergmann.pieces.Bishop;
+import de.profschmergmann.pieces.King;
+import de.profschmergmann.pieces.Knight;
+import de.profschmergmann.pieces.Pawn;
+import de.profschmergmann.pieces.Piece;
+import de.profschmergmann.pieces.Piece.PieceColor;
+import de.profschmergmann.pieces.Piece.PieceType;
+import de.profschmergmann.pieces.Queen;
+import de.profschmergmann.pieces.Rook;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/**
- * Class board which represents the current board with all pieces.
- */
 public class Board {
 
   private static final Logger LOGGER = Logger.getLogger(Board.class.getName());
-  private final HashMap<Position, Piece> positions = new HashMap<>();
+  private final HashMap<Position, HashSet<Piece>> squaresUnderAttack;
+  private final HashMap<Position, Piece> positions;
   private Position enPassant;
-  private Piece.Team currentTeam;
+  private PieceColor currentTeam;
   private boolean whiteCanCastleKingSide;
   private boolean whiteCanCastleQueenSide;
   private boolean blackCanCastleKingSide;
@@ -27,25 +32,15 @@ public class Board {
   private int movesGeneratorCounter;
   private boolean whiteChecked;
   private boolean blackChecked;
+  private Position posKingW;
+  private Position posKingB;
 
   //region Constructors
-
-  /**
-   * Constructor without parameters which produces an initial chess field.
-   */
   public Board() {
+    this.positions = new HashMap<>();
+    this.squaresUnderAttack = new HashMap<>();
     this.initBoard();
-    this.currentTeam = Team.WHITE;
-    this.whiteCanCastleKingSide = true;
-    this.whiteCanCastleQueenSide = true;
-    this.blackCanCastleKingSide = true;
-    this.blackCanCastleQueenSide = true;
-    this.halfMoves = 0;
-    this.fullMoves = 0;
-    this.availableMoves = this.getAllAvailableMoves(Team.WHITE);
-    this.whiteChecked = false;
-    this.blackChecked = false;
-    LOGGER.log(Level.FINE, "Initialized new board with starting values.");
+    LOGGER.log(Level.FINE, "Initialized new chess starting board.");
   }
 
   /**
@@ -55,62 +50,29 @@ public class Board {
    *                         created
    */
   public Board(String FENRecordFigures) {
-    if (FENRecordFigures == null || FENRecordFigures.isEmpty()) {
-      new Board();
-      return;
-    }
-    var lines = FENRecordFigures.split("/");
-    for (var i = 0; i < 8; i++) {
-      char c = 'a';
-      for (var j = 0; j < lines[i].length(); j++, c++) {
-        var pos = new Position(c, 8 - i);
-        if (String.valueOf(lines[i].charAt(j)).matches("\\d")) {
-          var v = Integer.parseInt(String.valueOf(lines[i].charAt(j)));
-          if (v == 8) {
-            break;
-          }
-          c += Integer.parseInt(String.valueOf(lines[i].charAt(j)));
-          j++;
-          if (j >= lines[i].length()) {
-            break;
-          }
-          if (c >= 'h') {
-            break;
-          }
-          pos = new Position(c, 8 - i);
-        }
-        var piece = switch (lines[i].charAt(j)) {
-          case 'P' -> new Piece(Piece.PieceEnum.PAWN_W);
-          case 'p' -> new Piece(Piece.PieceEnum.PAWN_B);
-          case 'R' -> new Piece(Piece.PieceEnum.ROOK_W);
-          case 'r' -> new Piece(Piece.PieceEnum.ROOK_B);
-          case 'N' -> new Piece(Piece.PieceEnum.KNIGHT_W);
-          case 'n' -> new Piece(Piece.PieceEnum.KNIGHT_B);
-          case 'B' -> new Piece(Piece.PieceEnum.BISHOP_W);
-          case 'b' -> new Piece(Piece.PieceEnum.BISHOP_B);
-          case 'Q' -> new Piece(Piece.PieceEnum.QUEEN_W);
-          case 'q' -> new Piece(Piece.PieceEnum.QUEEN_B);
-          case 'K' -> new Piece(Piece.PieceEnum.KING_W);
-          case 'k' -> new Piece(Piece.PieceEnum.KING_B);
-          default -> null;
-        };
-        if (piece != null) {
-          this.positions.put(pos, piece);
-        }
-      }
-    }
-    LOGGER.log(Level.FINE, "Set figures at board with FEN-Record: " + FENRecordFigures);
+    this.positions = new HashMap<>();
+    this.squaresUnderAttack = new HashMap<>();
+    this.initBoard(FENRecordFigures);
+    LOGGER.log(Level.FINE, "Initialized new chess board with record: " + FENRecordFigures);
   }
   //endregion
 
   //region Getters and Setters
+  /**
+   * Returns all positions.
+   *
+   * @return the positions as HashMap.
+   */
+  public HashMap<Position, Piece> getPositions() {
+    return this.positions;
+  }
 
   /**
    * Getter for current team.
    *
    * @return the current team
    */
-  public Team getCurrentTeam() {
+  public PieceColor getCurrentTeam() {
     return this.currentTeam;
   }
 
@@ -119,7 +81,7 @@ public class Board {
    *
    * @param currentTeam the current team
    */
-  public void setCurrentTeam(Team currentTeam) {
+  public void setCurrentTeam(PieceColor currentTeam) {
     this.currentTeam = currentTeam;
   }
 
@@ -140,7 +102,6 @@ public class Board {
   public void setWhiteCanCastleKingSide(boolean whiteCanCastleKingSide) {
     this.whiteCanCastleKingSide = whiteCanCastleKingSide;
   }
-
 
   /**
    * Getter for castling white queenside.
@@ -259,52 +220,96 @@ public class Board {
     this.enPassant = position;
   }
 
-  /**
-   * Returns all positions.
-   *
-   * @return the positions as HashMap.
-   */
-  public HashMap<Position, Piece> getPositions() {
-    return this.positions;
-  }
   //endregion
+
+  //region Initializers
+  /**
+   * Method which produces a chess field with a string decoded in FEN-Notation.
+   *
+   * @param FENRecordFigures the FEN-notation string, if null or empty an initial board will be
+   *                         created
+   */
+  private void initBoard(String FENRecordFigures) {
+    if (FENRecordFigures == null || FENRecordFigures.isEmpty()) {
+      new Board();
+      return;
+    }
+    var lines = FENRecordFigures.split("/");
+    for (var i = 0; i < 8; i++) {
+      char c = 'a';
+      for (var j = 0; j < lines[i].length(); j++, c++) {
+        var pos = new Position(c, 8 - i);
+        if (String.valueOf(lines[i].charAt(j)).matches("\\d")) {
+          var v = Integer.parseInt(String.valueOf(lines[i].charAt(j)));
+          if (v == 8) {
+            break;
+          }
+          c += Integer.parseInt(String.valueOf(lines[i].charAt(j)));
+          j++;
+          if (j >= lines[i].length()) {
+            break;
+          }
+          if (c >= 'h') {
+            break;
+          }
+          pos = new Position(c, 8 - i);
+        }
+        var piece = switch (lines[i].charAt(j)) {
+          case 'P' -> new Pawn(PieceColor.W);
+          case 'p' -> new Pawn(PieceColor.B);
+          case 'R' -> new Rook(PieceColor.W);
+          case 'r' -> new Rook(PieceColor.B);
+          case 'N' -> new Knight(PieceColor.W);
+          case 'n' -> new Knight(PieceColor.B);
+          case 'B' -> new Bishop(PieceColor.W);
+          case 'b' -> new Bishop(PieceColor.B);
+          case 'Q' -> new Queen(PieceColor.W);
+          case 'q' -> new Queen(PieceColor.B);
+          case 'K' -> new King(PieceColor.W);
+          case 'k' -> new King(PieceColor.B);
+          default -> null;
+        };
+        if (piece != null) {
+          this.positions.put(pos, piece);
+          if (piece.getPieceType().equals(PieceType.KING)) {
+            switch (piece.getPieceColor()) {
+              case B -> this.posKingB = pos;
+              case W -> this.posKingW = pos;
+            }
+          }
+        }
+      }
+    }
+    LOGGER.log(Level.FINE, "Set figures at board with FEN-Record: " + FENRecordFigures);
+  }
 
   /**
    * Initializes a starting chess game board.
    */
   private void initBoard() {
-    // Pawns
     for (var c = 'a'; c <= 'h'; c++) {
-      this.positions.put(new Position(c, 2), new Piece(Piece.PieceEnum.PAWN_W));
-      this.positions.put(new Position(c, 7), new Piece(Piece.PieceEnum.PAWN_B));
+      this.positions.put(new Position(c, 2), new Pawn(PieceColor.W));
+      this.positions.put(new Position(c, 7), new Pawn(PieceColor.B));
     }
-
-    // Rooks
-    this.positions.put(new Position('a', 1), new Piece(Piece.PieceEnum.ROOK_W));
-    this.positions.put(new Position('h', 1), new Piece(Piece.PieceEnum.ROOK_W));
-    this.positions.put(new Position('a', 8), new Piece(Piece.PieceEnum.ROOK_B));
-    this.positions.put(new Position('h', 8), new Piece(Piece.PieceEnum.ROOK_B));
-
-    // Knights
-    this.positions.put(new Position('b', 1), new Piece(Piece.PieceEnum.KNIGHT_W));
-    this.positions.put(new Position('g', 1), new Piece(Piece.PieceEnum.KNIGHT_W));
-    this.positions.put(new Position('b', 8), new Piece(Piece.PieceEnum.KNIGHT_B));
-    this.positions.put(new Position('g', 8), new Piece(Piece.PieceEnum.KNIGHT_B));
-
-    // Bishops
-    this.positions.put(new Position('c', 1), new Piece(Piece.PieceEnum.BISHOP_W));
-    this.positions.put(new Position('f', 1), new Piece(Piece.PieceEnum.BISHOP_W));
-    this.positions.put(new Position('c', 8), new Piece(Piece.PieceEnum.BISHOP_B));
-    this.positions.put(new Position('f', 8), new Piece(Piece.PieceEnum.BISHOP_B));
-
-    // Queens
-    this.positions.put(new Position('d', 1), new Piece(Piece.PieceEnum.QUEEN_W));
-    this.positions.put(new Position('d', 8), new Piece(Piece.PieceEnum.QUEEN_B));
-
-    // Kings
-    this.positions.put(new Position('e', 1), new Piece(Piece.PieceEnum.KING_W));
-    this.positions.put(new Position('e', 8), new Piece(Piece.PieceEnum.KING_B));
+    this.positions.put(new Position('a', 1), new Rook(PieceColor.W));
+    this.positions.put(new Position('h', 1), new Rook(PieceColor.W));
+    this.positions.put(new Position('a', 8), new Rook(PieceColor.B));
+    this.positions.put(new Position('h', 8), new Rook(PieceColor.B));
+    this.positions.put(new Position('b', 1), new Knight(PieceColor.W));
+    this.positions.put(new Position('g', 1), new Knight(PieceColor.W));
+    this.positions.put(new Position('b', 8), new Knight(PieceColor.B));
+    this.positions.put(new Position('g', 8), new Knight(PieceColor.B));
+    this.positions.put(new Position('c', 1), new Bishop(PieceColor.W));
+    this.positions.put(new Position('f', 1), new Bishop(PieceColor.W));
+    this.positions.put(new Position('c', 8), new Bishop(PieceColor.B));
+    this.positions.put(new Position('f', 8), new Bishop(PieceColor.B));
+    this.positions.put(new Position('d', 1), new Queen(PieceColor.W));
+    this.positions.put(new Position('d', 8), new Queen(PieceColor.B));
+    this.positions.put(new Position('e', 1), new King(PieceColor.W));
+    this.positions.put(new Position('e', 8), new King(PieceColor.B));
   }
+
+  //endregion
 
   /**
    * Returns the current board as a formatted string for the console.
@@ -343,10 +348,10 @@ public class Board {
    * @param to   the {@link  Position} to move to
    * @return the resulting board
    */
-  public Board move(Position from, Position to) {
+  public Move move(Position from, Position to) {
     var move = this.getAvailableMoves()
         .stream()
-        .filter(move1 -> move1.from().equals(from) && move1.to().equals(to))
+        .filter(move1 -> move1.start().equals(from) && move1.end().equals(to))
         .findFirst()
         .orElse(null);
 
@@ -358,15 +363,13 @@ public class Board {
     var pieceToMove = this.positions.get(from);
 
     //region en passant handling
-    if ((pieceToMove.getPieceEnum().equals(Piece.PieceEnum.PAWN_W)
-        || pieceToMove.getPieceEnum().equals(Piece.PieceEnum.PAWN_B))) {
+    if (pieceToMove.getPieceType().equals(PieceType.PAWN)) {
       if (move.canAttack()) {
         if (to.equals(this.enPassant)) {
           this.enPassant = null;
-          if (pieceToMove.getPieceEnum().equals(Piece.PieceEnum.PAWN_W)) {
-            this.positions.remove(new Position(this.enPassant.file(), 5));
-          } else {
-            this.positions.remove(new Position(this.enPassant.file(), 4));
+          switch (pieceToMove.getPieceColor()) {
+            case W -> this.positions.remove(new Position(this.enPassant.file(), 5));
+            case B -> this.positions.remove(new Position(this.enPassant.file(), 4));
           }
         }
       } else if (Math.abs(from.rank() - to.rank()) == 2) {
@@ -377,76 +380,56 @@ public class Board {
     //endregion
 
     //region castling handling
-    if (pieceToMove.getPieceEnum().equals(PieceEnum.KING_W) && pieceToMove.hasMoved()) {
-      this.setWhiteCanCastleKingSide(false);
+    if (pieceToMove.getPieceType().equals(PieceType.KING)) {
+      if (pieceToMove.isMoved()) {
+        switch (pieceToMove.getPieceColor()) {
+          case B -> {
+            this.setBlackCanCastleKingSide(false);
+            this.setBlackCanCastleQueenSide(false);
+          }
+          case W -> {
+            this.setWhiteCanCastleKingSide(false);
+            this.setWhiteCanCastleQueenSide(false);
+          }
+        }
+      }
+    }
+    var rookW = new Rook(PieceColor.W);
+    if (this.whiteCanCastleQueenSide &&
+        !this.positions.getOrDefault(new Position('a', 1), null).equals(rookW)) {
       this.setWhiteCanCastleQueenSide(false);
     }
-    if (pieceToMove.getPieceEnum().equals(PieceEnum.KING_B) && pieceToMove.hasMoved()) {
-      this.setBlackCanCastleKingSide(false);
-      this.setBlackCanCastleQueenSide(false);
-    }
-    if (this.whiteCanCastleQueenSide && this.positions.containsKey(new Position('a', 1)) &&
-        !this.positions.get(new Position('a', 1)).getPieceEnum().equals(PieceEnum.ROOK_W)) {
-      this.setWhiteCanCastleQueenSide(false);
-    }
-    if (this.whiteCanCastleKingSide && this.positions.containsKey(new Position('h', 1)) &&
-        !this.positions.get(new Position('h', 1)).getPieceEnum().equals(PieceEnum.ROOK_W)) {
+    if (this.whiteCanCastleKingSide &&
+        !this.positions.getOrDefault(new Position('h', 1), null).equals(rookW)) {
       this.setWhiteCanCastleKingSide(false);
     }
-    if (this.blackCanCastleQueenSide && this.positions.containsKey(new Position('a', 8)) &&
-        !this.positions.get(new Position('a', 8)).getPieceEnum().equals(PieceEnum.ROOK_B)) {
+    var rookB = new Rook(PieceColor.B);
+    if (this.blackCanCastleQueenSide &&
+        !this.positions.getOrDefault(new Position('a', 8), null).equals(rookB)) {
       this.setBlackCanCastleQueenSide(false);
     }
-    if (this.blackCanCastleKingSide && this.positions.containsKey(new Position('h', 8)) &&
-        !this.positions.get(new Position('h', 8)).getPieceEnum().equals(PieceEnum.ROOK_B)) {
+    if (this.blackCanCastleKingSide &&
+        !this.positions.getOrDefault(new Position('h', 8), null).equals(rookB)) {
       this.setBlackCanCastleKingSide(false);
     }
     //endregion
 
     //region check handling
-    if (pieceToMove.getPieceEnum().equals(PieceEnum.KING_B)) {
-      this.blackChecked = false;
-    }
-    if (pieceToMove.getPieceEnum().equals(PieceEnum.KING_W)) {
-      this.whiteChecked = false;
+    if (pieceToMove.getPieceType().equals(PieceType.KING)) {
+      switch (pieceToMove.getPieceColor()) {
+        case B -> this.blackChecked = false;
+        case W -> this.whiteChecked = false;
+      }
     }
     //endregion
 
     this.positions.remove(from);
-    pieceToMove.hasMoved();
+    pieceToMove.setMoved();
     this.positions.put(to, pieceToMove);
     this.fullMoves++;
 
-    this.currentTeam = this.currentTeam == Team.WHITE ? Team.BLACK : Team.WHITE;
-    return this;
-  }
-
-  /**
-   * Finds a specific pieceEnum on the board if it exists.
-   *
-   * @param pieceEnum the piece enum to find
-   * @return the position piece entry if found or null if not found
-   */
-  public Map.Entry<Position, Piece> findPieceOnBoard(Piece.PieceEnum pieceEnum) {
-    return this.positions
-        .entrySet()
-        .stream()
-        .filter(positionPieceEntry ->
-            positionPieceEntry.getValue().getPieceEnum().equals(pieceEnum))
-        .findFirst()
-        .orElse(null);
-  }
-
-  /**
-   * Getter for checking.
-   *
-   * @return true if the king is checked by any other piece, else false
-   */
-  public boolean isChecked() {
-    if (this.currentTeam == Team.WHITE) {
-      return this.whiteChecked;
-    }
-    return this.blackChecked;
+    this.currentTeam = this.currentTeam == PieceColor.W ? PieceColor.B : PieceColor.W;
+    return move;
   }
 
   /**
@@ -469,19 +452,19 @@ public class Board {
    *
    * @return a HashSet of moves
    */
-  private HashSet<Move> getAllAvailableMoves(Team team) {
+  private HashSet<Move> getAllAvailableMoves(PieceColor team) {
     var set = new HashSet<Move>();
     this.positions.entrySet()
         .stream()
-        .filter(entry -> entry.getValue().getTeam().equals(team))
+        .filter(entry -> entry.getValue().getPieceColor().equals(team))
         .forEach(entry -> {
           var currentPos = entry.getKey();
-          var pieceEnum = entry.getValue().getPieceEnum();
+          var piece = entry.getValue();
           char c;
           int i;
           Move move;
-          switch (pieceEnum) {
-            case KING_B, KING_W -> {
+          switch (piece.getPieceType()) {
+            case KING -> {
               for (c = 'a'; c <= 'h'; c++) {
                 for (i = 1; i <= 8; i++) {
                   if ((char) (currentPos.file() - 1) == c && currentPos.rank() + 1 == i ||
@@ -492,7 +475,8 @@ public class Board {
                       currentPos.file() == c && currentPos.rank() == i - 1 ||
                       (char) (currentPos.file() + 1) == c && currentPos.rank() - 1 == i ||
                       (char) (currentPos.file() - 1) == c && currentPos.rank() == i) {
-                    move = this.createMoveIfPossible(currentPos, pieceEnum, new Position(c, i));
+                    move = this.createMoveIfPossible(currentPos, piece,
+                        new Position(c, i));
                     if (move != null) {
                       set.add(move);
                     }
@@ -500,10 +484,11 @@ public class Board {
                 }
               }
             }
-            case PAWN_B, PAWN_W -> {
+            //region Pawn
+            case PAWN -> {
               var positionsToAdd = new HashSet<Position>();
               c = currentPos.file();
-              if (pieceEnum.equals(PieceEnum.PAWN_W)) {
+              if (piece.getPieceColor().equals(PieceColor.W)) {
                 i = currentPos.rank() + 1;
                 if (i <= 8) {
                   positionsToAdd.add(new Position(c, i));
@@ -529,15 +514,16 @@ public class Board {
                 if (c >= 'a') {
                   positionsToAdd.add(new Position(c, i));
                 }
-                for (Position position : positionsToAdd) {
-                  move = this.createMoveIfPossible(currentPos, pieceEnum, position);
+                for (var position : positionsToAdd) {
+                  move = this.createMoveIfPossible(currentPos, piece, position);
                   if (move != null) {
                     set.add(move);
                   }
                 }
               }
             }
-            case KNIGHT_B, KNIGHT_W -> {
+            //endregion
+            case KNIGHT -> {
               for (c = 'a'; c <= 'h'; c++) {
                 for (i = 1; i <= 8; i++) {
                   if ((char) (currentPos.file() - 2) == c && currentPos.rank() + 1 == i ||
@@ -548,7 +534,7 @@ public class Board {
                       (char) (currentPos.file() + 1) == c && currentPos.rank() - 2 == i ||
                       (char) (currentPos.file() - 1) == c && currentPos.rank() - 2 == i ||
                       (char) (currentPos.file() - 2) == c && currentPos.rank() - 1 == i) {
-                    move = this.createMoveIfPossible(currentPos, pieceEnum, new Position(c, i));
+                    move = this.createMoveIfPossible(currentPos, piece, new Position(c, i));
                     if (move != null) {
                       set.add(move);
                     }
@@ -556,14 +542,14 @@ public class Board {
                 }
               }
             }
-            case BISHOP_B, BISHOP_W, ROOK_B, ROOK_W, QUEEN_B, QUEEN_W -> {
+            case BISHOP, ROOK, QUEEN -> {
               //region Bishop, Queen
-              if (pieceEnum == PieceEnum.BISHOP_W || pieceEnum == PieceEnum.BISHOP_B ||
-                  pieceEnum == PieceEnum.QUEEN_W || pieceEnum == PieceEnum.QUEEN_B) {
+              if (piece.getPieceType().equals(PieceType.BISHOP) ||
+                  piece.getPieceType().equals(PieceType.QUEEN)) {
                 c = (char) (currentPos.file() - 1);
                 i = currentPos.rank() + 1;
                 while (c >= 'a' && i <= 8) {
-                  move = this.createMoveIfPossible(currentPos, pieceEnum, new Position(c, i));
+                  move = this.createMoveIfPossible(currentPos, piece, new Position(c, i));
                   if (move != null) {
                     set.add(move);
                     if (move.canAttack()) {
@@ -578,7 +564,7 @@ public class Board {
                 c = (char) (currentPos.file() + 1);
                 i = currentPos.rank() + 1;
                 while (c <= 'h' && i <= 8) {
-                  move = this.createMoveIfPossible(currentPos, pieceEnum, new Position(c, i));
+                  move = this.createMoveIfPossible(currentPos, piece, new Position(c, i));
                   if (move != null) {
                     set.add(move);
                     if (move.canAttack()) {
@@ -593,7 +579,7 @@ public class Board {
                 c = (char) (currentPos.file() + 1);
                 i = currentPos.rank() - 1;
                 while (c <= 'h' && i >= 1) {
-                  move = this.createMoveIfPossible(currentPos, pieceEnum, new Position(c, i));
+                  move = this.createMoveIfPossible(currentPos, piece, new Position(c, i));
                   if (move != null) {
                     set.add(move);
                     if (move.canAttack()) {
@@ -608,7 +594,7 @@ public class Board {
                 c = (char) (currentPos.file() - 1);
                 i = currentPos.rank() - 1;
                 while (c >= 'a' && i >= 1) {
-                  move = this.createMoveIfPossible(currentPos, pieceEnum, new Position(c, i));
+                  move = this.createMoveIfPossible(currentPos, piece, new Position(c, i));
                   if (move != null) {
                     set.add(move);
                     if (move.canAttack()) {
@@ -623,12 +609,12 @@ public class Board {
               }
               //endregion
               //region Rook, Queen
-              if (pieceEnum == PieceEnum.ROOK_W || pieceEnum == PieceEnum.ROOK_B ||
-                  pieceEnum == PieceEnum.QUEEN_W || pieceEnum == PieceEnum.QUEEN_B) {
+              if (piece.getPieceType().equals(PieceType.ROOK) ||
+                  piece.getPieceType().equals(PieceType.QUEEN)) {
                 c = (char) (currentPos.file() - 1);
                 i = currentPos.rank();
                 while (c >= 'a') {
-                  move = this.createMoveIfPossible(currentPos, pieceEnum, new Position(c, i));
+                  move = this.createMoveIfPossible(currentPos, piece, new Position(c, i));
                   if (move != null) {
                     set.add(move);
                     if (move.canAttack()) {
@@ -642,7 +628,7 @@ public class Board {
                 i = currentPos.rank() + 1;
                 c = currentPos.file();
                 while (i <= 8) {
-                  move = this.createMoveIfPossible(currentPos, pieceEnum, new Position(c, i));
+                  move = this.createMoveIfPossible(currentPos, piece, new Position(c, i));
                   if (move != null) {
                     set.add(move);
                     if (move.canAttack()) {
@@ -656,7 +642,7 @@ public class Board {
                 c = (char) (currentPos.file() + 1);
                 i = currentPos.rank();
                 while (c <= 'h') {
-                  move = this.createMoveIfPossible(currentPos, pieceEnum, new Position(c, i));
+                  move = this.createMoveIfPossible(currentPos, piece, new Position(c, i));
                   if (move != null) {
                     set.add(move);
                     if (move.canAttack()) {
@@ -670,7 +656,7 @@ public class Board {
                 c = currentPos.file();
                 i = currentPos.rank() - 1;
                 while (i >= 1) {
-                  move = this.createMoveIfPossible(currentPos, pieceEnum, new Position(c, i));
+                  move = this.createMoveIfPossible(currentPos, piece, new Position(c, i));
                   if (move != null) {
                     set.add(move);
                     if (move.canAttack()) {
@@ -687,29 +673,45 @@ public class Board {
           }
         });
     //region check handling
-    var king = this.findPieceOnBoard(team == Team.WHITE ? PieceEnum.KING_B : PieceEnum.KING_W);
+    var posKing = this.currentTeam.equals(PieceColor.W) ? this.posKingW : this.posKingB;
     var attackingPositions = set.stream()
         .filter(Move::canAttack)
-        .map(Move::to)
-        .filter(position -> position.equals(king.getKey()))
+        .map(Move::end)
+        .filter(position -> position.equals(posKing))
         .toList();
     if (!attackingPositions.isEmpty()) {
-      if (team == Team.WHITE) {
-        this.blackChecked = true;
-      } else {
-        this.whiteChecked = true;
+      switch (team) {
+        case W -> this.blackChecked = true;
+        case B -> this.whiteChecked = true;
       }
     }
-    if (team == Team.WHITE && this.whiteChecked || team == Team.BLACK && this.blackChecked) {
-      set.removeIf(move -> !move.piece().equals(king.getValue().getPieceEnum()));
-      set.removeIf(move -> attackingPositions.contains(move.to()));
+    if (team.equals(PieceColor.W) && this.whiteChecked
+        || team.equals(PieceColor.B) && this.blackChecked) {
+      set.removeIf(move -> !move.piece().getPieceType().equals(PieceType.KING));
+      set.removeIf(move -> attackingPositions.contains(move.end()));
       if (!set.isEmpty()) {
-        LOGGER.log(Level.WARNING, king.getValue().getPieceEnum() + " is checked by\n");
+        LOGGER.log(Level.WARNING, posKing + " is checked by\n");
         set.forEach(move -> LOGGER.log(Level.WARNING, move.toString()));
       }
     }
     //endregion
     return set;
+  }
+
+  /**
+   * Finds a specific piece on the board if it exists.
+   *
+   * @param piece the piece to find
+   * @return the position piece entry if found or null if not found
+   */
+  public Map.Entry<Position, Piece> findPieceOnBoard(Piece piece) {
+    return this.positions
+        .entrySet()
+        .stream()
+        .filter(positionPieceEntry ->
+            positionPieceEntry.getValue().equals(piece))
+        .findFirst()
+        .orElse(null);
   }
 
   /**
@@ -720,25 +722,25 @@ public class Board {
    * @param neighbourPos the neighbour position to check
    * @return the move or null
    */
-  private Move createMoveIfPossible(Position currentPos, Piece.PieceEnum piece,
-      Position neighbourPos) {
-    var pawn = piece.equals(Piece.PieceEnum.PAWN_B) || piece.equals(Piece.PieceEnum.PAWN_W);
+  private Move createMoveIfPossible(Position currentPos, Piece piece, Position neighbourPos) {
+    var pawn = piece.getPieceType().equals(PieceType.PAWN);
     if (pawn && this.enPassantPossible() && neighbourPos.equals(this.enPassant)) {
-      return new Move(currentPos, neighbourPos, piece, true);
+      return new Move(currentPos, neighbourPos, piece, this.positions.get(this.enPassant));
     }
     if (this.positions.containsKey(neighbourPos)) {
       if (pawn && currentPos.file() == neighbourPos.file()) {
         return null;
       }
-      if (!this.positions.get(neighbourPos).getTeam().equals(this.currentTeam)) {
-        return new Move(currentPos, neighbourPos, piece, true);
+      if (!this.positions.get(neighbourPos).getPieceColor().equals(this.currentTeam)) {
+        return new Move(currentPos, neighbourPos, piece, this.positions.get(neighbourPos));
       }
       return null;
     } else {
       if (pawn && currentPos.file() != neighbourPos.file()) {
         return null;
       }
-      return new Move(currentPos, neighbourPos, piece, false);
+      return new Move(currentPos, neighbourPos, piece, null);
     }
   }
+
 }

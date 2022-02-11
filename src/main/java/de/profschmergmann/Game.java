@@ -1,14 +1,51 @@
-package de.profschmergmann.sad;
+package de.profschmergmann;
 
-import de.profschmergmann.sad.pieces.Piece;
-import de.profschmergmann.sad.pieces.Piece.PieceColor;
-import de.profschmergmann.sad.players.Player;
+import de.profschmergmann.pieces.Piece;
+import de.profschmergmann.pieces.Piece.PieceColor;
+import de.profschmergmann.players.Player;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Game {
 
+  private static final Logger LOGGER = Logger.getLogger(Game.class.getName());
+  private final String startingFEN;
   private final Board currentBoard;
+
+  public String getStartingFEN() {
+    return this.startingFEN;
+  }
+
+  public Board getCurrentBoard() {
+    return this.currentBoard;
+  }
+
+  public List<Move> getPlayedMoves() {
+    return this.playedMoves;
+  }
+
+  public Player getPlayer1() {
+    return this.player1;
+  }
+
+  public Player getPlayer2() {
+    return this.player2;
+  }
+
+  public PieceColor getTurn() {
+    return this.turn;
+  }
+
+  public Result getResult() {
+    return this.result;
+  }
+
+  public CheckStatus getCheckStatus() {
+    return this.checkStatus;
+  }
+
   private final List<Move> playedMoves;
   private final Player player1;
   private final Player player2;
@@ -16,17 +53,40 @@ public class Game {
   private Result result;
   private CheckStatus checkStatus;
 
-  public Game(Player player1, Player player2) {
+  public Game(Player player1, Player player2, String startingFEN) {
     this.player1 = player1;
     this.player2 = player2;
     this.playedMoves = new ArrayList<>();
     this.turn = Piece.PieceColor.W;
     this.result = null;
     this.checkStatus = CheckStatus.NONE;
-    this.currentBoard = new Board();
+    if (startingFEN != null) {
+      this.currentBoard = new Board(startingFEN);
+      this.startingFEN = startingFEN;
+    } else {
+      this.currentBoard = new Board();
+      this.startingFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    }
   }
 
-  public void addMove(Move move) {
+  /**
+   * Method for performing a move inside the current game.
+   *
+   * @param from the {@link Position} from where the move should be performed
+   * @param to   the {@link Position} to where the move should be performed
+   * @return true if the move worked, else false
+   */
+  public boolean move(Position from, Position to) {
+    var move = this.currentBoard.move(from, to);
+    if (move != null) {
+      LOGGER.log(Level.FINE, "Moved a piece from " + from + " to: " + to);
+      this.addMove(move);
+      return true;
+    }
+    return false;
+  }
+
+  private void addMove(Move move) {
     this.playedMoves.add(move);
   }
 
@@ -123,7 +183,4 @@ public class Game {
     BLACK_IN_CHECK, WHITE_IN_CHECK, BLACK_CHECKMATED, WHITE_CHECKMATED, NONE
   }
 
-  public record Move(Position start, Position end, Piece piece, Piece capturedPiece) {
-
-  }
 }

@@ -1,27 +1,9 @@
-package de.profschmergmann.sad.pieces;
-
-import de.profschmergmann.sad.Position;
-import java.util.HashSet;
+package de.profschmergmann.pieces;
 
 public class King extends Piece {
 
   public King(PieceColor pieceColor) {
     super(pieceColor, PieceType.KING);
-  }
-
-  @Override
-  public HashSet<Position> possibleMoves() {
-    return null;
-  }
-
-  @Override
-  public HashSet<Position> positionsToAttack() {
-    return null;
-  }
-
-  @Override
-  public HashSet<Position> captureFreeMoves() {
-    return null;
   }
 
   /**

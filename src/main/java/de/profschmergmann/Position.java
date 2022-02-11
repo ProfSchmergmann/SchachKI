@@ -1,4 +1,4 @@
-package de.profschmergmann.sad;
+package de.profschmergmann;
 
 
 import java.util.logging.Logger;

@@ -1,4 +1,4 @@
-import de.profschmergmann.sad.Board;
+import de.profschmergmann.Board;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
